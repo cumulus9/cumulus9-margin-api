@@ -1,0 +1,20 @@
+# OS generated files #
+######################
+*.DS_Store
+*.DS_Store?
+*._*
+*.Spotlight-V100
+*.Trashes
+*ehthumbs.db
+*Thumbs.db
+
+*package-lock.json
+*node_modules
+*yarn-error.log
+*.env
+*__pycache__
+*.pyc
+
+*test.sh
+*test.js
+*test.py
