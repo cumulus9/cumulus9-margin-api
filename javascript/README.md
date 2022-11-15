@@ -72,75 +72,91 @@ Response example:
 ```json
 {
     "Company ABC": {
-        "results": {
-            "marginDetails": [
-                {
-                    "fxRateUsd": 0.9170946439356291,
-                    "marginType": "span",
-                    "clearingOrg": "ICE",
-                    "currencyCode": "EUR",
-                    "marginStatus": "done",
-                    "initialMargin": 1290996,
-                    "marginDetails": [
-                        {
-                            "ccCode": "I",
-                            "exchange": "L",
-                            "scenario": "11",
-                            "currencyCode": "EUR",
-                            "scanningRisk": "1290996",
-                            "initialMargin": "1290996",
-                            "promptDateCharge": "0",
-                            "intraSpreadCharge": "0",
-                            "shortOptionCharge": "0",
-                            "intercontractCredit": "0",
-                            "strategySpreadCharges": "0",
-                            "optionLiquidationValue": "0"
-                        }
-                    ],
-                    "optionLiquidationValue": 0
-                },
-                {
-                    "fxRateUsd": 1,
-                    "marginType": "span",
-                    "clearingOrg": "CME",
-                    "currencyCode": "USD",
-                    "marginStatus": "done",
-                    "initialMargin": 4875000,
-                    "marginDetails": [
-                        {
-                            "ccCode": "ED",
-                            "exchange": "CME",
-                            "scenario": "13",
-                            "currencyCode": "USD",
-                            "scanningRisk": "7750000",
-                            "initialMargin": "2437500",
-                            "promptDateCharge": "0",
-                            "intraSpreadCharge": "0",
-                            "shortOptionCharge": "0",
-                            "intercontractCredit": "5312500",
-                            "strategySpreadCharges": "0",
-                            "optionLiquidationValue": "0"
-                        },
-                        {
-                            "ccCode": "SR3",
-                            "exchange": "CME",
-                            "scenario": "11",
-                            "currencyCode": "USD",
-                            "scanningRisk": "7750000",
-                            "initialMargin": "2437500",
-                            "promptDateCharge": "0",
-                            "intraSpreadCharge": "0",
-                            "shortOptionCharge": "0",
-                            "intercontractCredit": "5312500",
-                            "strategySpreadCharges": "0",
-                            "optionLiquidationValue": "0"
-                        }
-                    ],
-                    "optionLiquidationValue": 0
-                }
-            ],
-            "initialMarginUSD": 6282702
-        },
+        "status": "done",
+        "initial_margin": 15503342,
+        "option_liquidation_value": 13378080,
+        "margin_by_ccp": [
+            {
+                "fxrate": 1,
+                "clearing_org": "CME",
+                "currency_code": "USD",
+                "initial_margin": 13288944,
+                "option_liquidation_value": 13378080
+            },
+            {
+                "fxrate": 0.96581031450278,
+                "clearing_org": "ICE",
+                "currency_code": "EUR",
+                "initial_margin": 2138688,
+                "option_liquidation_value": 0
+            }
+        ],
+        "margin_by_span": [
+            {
+                "fxrate": 1,
+                "cc_code": "ED",
+                "exchange": "CME",
+                "scenario": 1,
+                "clearing_org": "CME",
+                "currency_code": "USD",
+                "scanning_risk": 0,
+                "initial_margin": 0,
+                "prompt_date_charge": 0,
+                "intra_spread_charge": 0,
+                "short_option_charge": 0,
+                "intercontract_credit": 0,
+                "strategy_spread_charge": 0,
+                "option_liquidation_value": 0
+            },
+            {
+                "fxrate": 1,
+                "cc_code": "SR3",
+                "exchange": "CME",
+                "scenario": 11,
+                "clearing_org": "CME",
+                "currency_code": "USD",
+                "scanning_risk": 150000,
+                "initial_margin": 150000,
+                "prompt_date_charge": 0,
+                "intra_spread_charge": 0,
+                "short_option_charge": 0,
+                "intercontract_credit": 0,
+                "strategy_spread_charge": 0,
+                "option_liquidation_value": 0
+            },
+            {
+                "fxrate": 1,
+                "cc_code": "NY-CL",
+                "exchange": "NYM",
+                "scenario": 14,
+                "clearing_org": "CME",
+                "currency_code": "USD",
+                "scanning_risk": 13138944,
+                "initial_margin": 13138944,
+                "prompt_date_charge": 0,
+                "intra_spread_charge": 0,
+                "short_option_charge": 0,
+                "intercontract_credit": 0,
+                "strategy_spread_charge": 0,
+                "option_liquidation_value": 13378080
+            },
+            {
+                "fxrate": 0.96581031450278,
+                "cc_code": "I",
+                "exchange": "L",
+                "scenario": 11,
+                "clearing_org": "ICE",
+                "currency_code": "EUR",
+                "scanning_risk": 2138688,
+                "initial_margin": 2138688,
+                "prompt_date_charge": 0,
+                "intra_spread_charge": 0,
+                "short_option_charge": 0,
+                "intercontract_credit": 0,
+                "strategy_spread_charge": 0,
+                "option_liquidation_value": 0
+            }
+        ],
         "exceptions": null
     }
 }

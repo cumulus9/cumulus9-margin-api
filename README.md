@@ -20,3 +20,8 @@ Extra functionalities:
 * Portfolio EVT and Copula Analysis
 * Database to mantain a record of your margin calculations
 * Automated margin report/alert emails
+
+## [About Us](https://cumulus9.com/)
+
+* [Privacy Policy](https://cumulus9.com/privacy-policy.html)
+* [Terms and Conditions](https://cumulus9.com/terms-and-conditions.html)
