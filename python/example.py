@@ -20,66 +20,70 @@ os.environ["C9_API_CLIENT_SECRET"] = c9_api_client_secret
 # portfolio in verbose format
 portfolio_payload = [
     {
-        "position_id": "0",
-        "account_code": "Company ABC",
-        "exchange_code": "CME",
-        "contract_code": "ED",
-        "contract_type": "FUT",
-        "contract_expiry": "202212",
-        "contract_strike": "",
-        "net_position": "10000",
-    },
-    {
         "position_id": "1",
         "account_code": "Company ABC",
-        "exchange_code": "CME",
-        "contract_code": "SR3",
-        "contract_type": "FUT",
-        "contract_expiry": "202212",
-        "contract_strike": "",
-        "net_position": "-10000",
+        "exchange_code": "NYMEX",
+        "contract_code": "LO",
+        "contract_type": "CALL",
+        "contract_expiry": "202312",
+        "contract_strike": "50",
+        "net_position": "1000",
     },
     {
         "position_id": "2",
         "account_code": "Company ABC",
-        "exchange_code": "ICE.IFLL",
-        "contract_code": "I",
+        "exchange_code": "EUREX",
+        "contract_code": "FDAX",
         "contract_type": "FUT",
-        "contract_expiry": "202212",
+        "contract_expiry": "202312",
         "contract_strike": "",
-        "net_position": "-2256",
+        "net_position": "-50",
     },
     {
         "position_id": "3",
         "account_code": "Company ABC",
-        "exchange_code": "NYM",
-        "contract_code": "LO",
+        "exchange_code": "ICE.EU",
+        "contract_code": "B",
         "contract_type": "CALL",
-        "contract_expiry": "202212",
-        "contract_strike": "80",
-        "net_position": "2256",
+        "contract_expiry": "202312",
+        "contract_strike": "50",
+        "net_position": "1000",
+    },
+    {
+        "position_id": "4",
+        "account_code": "Company EFG",
+        "exchange_code": "ICE.IFLL",
+        "contract_code": "I",
+        "contract_type": "FUT",
+        "contract_expiry": "202312",
+        "contract_strike": "",
+        "net_position": "-112",
+    },
+    {
+        "position_id": "5",
+        "account_code": "Company EFG",
+        "exchange_code": "CME",
+        "contract_code": "SR3",
+        "contract_type": "FUT",
+        "contract_expiry": "202309",
+        "contract_strike": "",
+        "net_position": "-100",
+    },
+    {
+        "position_id": "6",
+        "account_code": "Company EFG",
+        "exchange_code": "ICE.IFLL",
+        "contract_code": "I",
+        "contract_type": "FUT",
+        "contract_expiry": "202309",
+        "contract_strike": "",
+        "net_position": "-2256",
     },
 ]
-
-# portfolio in minified format (alternative, the API accepts portfolios in both formats)
-# portfolio_payload = [
-#     ["0", "Company ABC", "CME", "ED", "FUT", "202212", "", "10000"],
-#     ["1", "Company ABC", "CME", "SR3", "FUT", "202212", "", "-10000"],
-#     ["2", "Company ABC", "ICE.IFLL", "I", "FUT", "202212", "", "-2256"],
-# ]
-
-# read postion file from local csv file
-# csv_position_df = pandas.read_csv("./sample.csv", na_filter=False)
-# portfolio_payload = csv_position_df.reset_index().astype(str).values.tolist()
 
 # post portfolio and receive the margin results in json format
 # you should inspect this json to retrieve a drilldown of the margin calculations and margin offsets applied
 results_json = cumulus9.postPorfolio(portfolio_payload).json()
-
-
-import json
-
-json.dumps(results_json)
 
 # extract the margin figure from results_json
 results = []
