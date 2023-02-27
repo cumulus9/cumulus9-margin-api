@@ -1,4 +1,0 @@
-﻿account,exchange,pf_code,pf_type,expiry,strike,net_position
-Company ABC,CME,ED,FUT,202212,,10000
-Company ABC,CME,SR3,FUT,202212,,-10000
-Company ABC,ICE.IFLL,I,FUT,202212,,-2256
