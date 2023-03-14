@@ -25,7 +25,7 @@ Portfolio verbose format:
 ```javascript
 // portfolio in verbose format
 const portfolio_payload = {
-    vendor_symbology: "clearing",
+    vendor_symbology: 'clearing',
     access_level: 'public',
     portfolio: [
         {

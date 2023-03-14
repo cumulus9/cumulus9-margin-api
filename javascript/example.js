@@ -7,7 +7,7 @@ const cumulus9 = require('./cumulus9.js')
 
 // portfolio in verbose format
 const portfolio_payload = {
-    vendor_symbology: "clearing",
+    vendor_symbology: 'clearing',
     access_level: 'public',
     portfolio: [
         {
