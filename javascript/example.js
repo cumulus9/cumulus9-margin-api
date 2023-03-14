@@ -5,7 +5,9 @@
 require('dotenv').config()
 const cumulus9 = require('./cumulus9.js')
 
-const payload = {
+// portfolio in verbose format
+const portfolio_payload = {
+    vendor_symbology: "clearing",
     access_level: 'public',
     portfolio: [
         {
@@ -72,7 +74,7 @@ const payload = {
 }
 
 cumulus9
-    .postPorfolio(payload)
+    .postPorfolio(portfolio_payload)
     .then((r) => {
         console.log(JSON.stringify(r))
     })
