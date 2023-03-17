@@ -19,3 +19,5 @@
 *test.sh
 *test.js
 *test.py
+
+*.local*
