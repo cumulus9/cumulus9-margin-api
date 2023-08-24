@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Cumulus9 - All rights reserved.
 
+import json
 import cumulus9
 
 # please contact support@cumulus9.com to receive the below credentials
@@ -65,7 +66,7 @@ api_credentials = {
 # post portfolio and receive the margin results in json format
 results_json = cumulus9.post("/portfolios", portfolio_payload, api_credentials).json()
 
-print(results_json)
+print(json.dumps(results_json))
 
 # {
 #     "request_id": "9bc0f866-f04e-4316-b87e-386416d6410f",

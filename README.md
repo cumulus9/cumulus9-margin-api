@@ -35,7 +35,7 @@ Data: `grant_type=client_credentials&scope=riskcalc%2Fget`
 Request: `POST ${c9_api_auth_endpoint}`
 ```
 
-### Step 3: POST Request to Submit Your Portfolio and Receive Margin Results
+### Step 2: POST Request to Submit Your Portfolio and Receive Margin Results
 
 Sample portfolio payload (change only the portfolio section as needed):
 

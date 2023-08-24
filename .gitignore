@@ -21,3 +21,7 @@
 *test.py
 
 *.local*
+
+# csharp generated files #
+bin/
+obj/
