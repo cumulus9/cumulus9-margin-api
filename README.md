@@ -24,7 +24,7 @@ You can easily utilize this API by sending a POST request to obtain an access to
 
 Once you obtain from `support@cumulus9.com` your credentials: `c9_api_endpoint`, `c9_api_auth_endpoint`, `c9_api_client_id`, `c9_api_client_secret`, you can start using the API.
 
-### Step 1: POST REQUEST To Retrieve Access Token
+### Step 1: POST Request to Obtain an Access Token
 
 Post Request:
 
@@ -35,7 +35,7 @@ Data: `grant_type=client_credentials&scope=riskcalc%2Fget`
 Request: `POST ${c9_api_auth_endpoint}`
 ```
 
-### Step 3: POST REQUEST To send your portfolios to receive the margin
+### Step 3: POST Request to Submit Your Portfolio and Receive Margin Results
 
 Sample portfolio payload (change only the portfolio section as needed):
 
