@@ -3,10 +3,10 @@
 # Cumulus9 - All rights reserved.
 
 # please contact support@cumulus9.com to receive the below credentials
-c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
-c9_api_auth_endpoint = "xxxxxxxxxxxxxxxxxx"
-c9_api_client_id = "xxxxxxxxxxxxxxxxxx"
-c9_api_client_secret = "xxxxxxxxxxxxxxxxxx"
+c9_api_endpoint="xxxxxxxxxxxxxxxxxx"
+c9_api_auth_endpoint="xxxxxxxxxxxxxxxxxx"
+c9_api_client_id="xxxxxxxxxxxxxxxxxx"
+c9_api_client_secret="xxxxxxxxxxxxxxxxxx"
 
 # example of portfolio payload
 portfolio_payload='
