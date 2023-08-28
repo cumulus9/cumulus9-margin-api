@@ -8,6 +8,8 @@ The Cumulus9 Margin API is a Restful Web Service replicating the same Clearing H
 
 The API allows you to load a portfolio of derivatives and receive within milliseconds the margin and calculation drill-down explaining the offsets applied.
 
+![cumulus9-margin-api](https://raw.githubusercontent.com/cumulus9/cumulus9-margin-api/main/.github/images/instructions.gif)
+
 ## How to get started (TL;DR)
 
 To access the Cumulus9 Margin API, please send an email to `support@cumulus9.com` requesting credentials.
