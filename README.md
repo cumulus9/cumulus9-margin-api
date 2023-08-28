@@ -98,5 +98,5 @@ You will receive the margin in the response and calculation drill-down explainin
 
 ## [About Us](https://cumulus9.com)
 
-* [Privacy Policy](https://cumulus9.com/privacy-policy)
-* [Terms and Conditions](https://cumulus9.com/terms-and-conditions)
+-   [Privacy Policy](https://cumulus9.com/privacy-policy)
+-   [Terms and Conditions](https://cumulus9.com/terms-and-conditions)
