@@ -6,7 +6,7 @@ A quick start guide to trial the Cumulus9 Margin API with your favorite programm
 
 The Cumulus9 Margin API is a Restful Web Service replicating the same Clearing Houses margin algorithms of all major derivatives exchanges, including SPAN, SPAN2, PRISMA, TIMS, NODAL VaR, IRM 2.0 and B3 Core.
 
-The API allows you to load a portfolio of derivatives and receive within milliseconds the margin and calculation drill-down explaining the offsets applied.
+The API allows you to load a portfolio of derivatives and receive the margin and calculation drill-down explaining the offsets applied.
 
 ![cumulus9-margin-api](https://raw.githubusercontent.com/cumulus9/cumulus9-margin-api/main/.github/images/instructions.gif)
 
