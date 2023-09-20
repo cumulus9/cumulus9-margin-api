@@ -1,6 +1,6 @@
 # Cumulus9 Margin API
 
-A quick start guide to trial the Cumulus9 Margin API with your favorite programming language.
+A quick start guide to use the Cumulus9 Margin API with your favorite programming language.
 
 ## Description
 
@@ -46,6 +46,7 @@ Sample portfolio payload (change only the portfolio section as needed):
     "vendor_symbology": "clearing",
     "calculation_type": "margins",
     "execution_mode": "sync",
+    // "cme_symbology":  "globex",
     "portfolio": [
         {
             "account_code": "Account 001",

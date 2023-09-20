@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 # Cumulus9 - All rights reserved.
 
-import json
+import base64
 import datetime
+import json
 import pandas
-import cumulus9
+import requests
 
 """
 A proof-of-concept that can be used to estimate changes in portfolio margin as contracts near their maturity date.
@@ -18,8 +19,49 @@ c9_api_auth_endpoint = "xxxxxxxxxxxxxxxxxx"
 c9_api_client_id = "xxxxxxxxxxxxxxxxxx"
 c9_api_client_secret = "xxxxxxxxxxxxxxxxxx"
 
+# -----------------------------------------------------------------------------
+# REST API functions to retrieve the Cumulus9 access token and post portfolio
+# -----------------------------------------------------------------------------
+
+
+def get_access_token(api_credentials):
+    basic_authorization_bytes = (api_credentials["client_id"] + ":" + api_credentials["client_secret"]).encode("ascii")
+    basic_authorization_base64 = base64.b64encode(basic_authorization_bytes)
+    headers = {
+        "Authorization": "Basic " + basic_authorization_base64.decode("utf-8"),
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    data = "grant_type=client_credentials&scope=riskcalc%2Fget"
+    return requests.post(api_credentials["auth_endpoint"], headers=headers, data=data)
+
+
+def post(url, data, api_credentials):
+    try:
+        auth = get_access_token(api_credentials)
+        if auth.status_code == 200:
+            access_token = auth.json()["access_token"]
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + access_token,
+            }
+            return requests.post(
+                api_credentials["endpoint"] + url,
+                headers=headers,
+                json=data,
+            )
+        else:
+            raise ValueError("HTTP", auth.status_code, "-", auth.reason)
+    except Exception as error:
+        raise ValueError("Cumulus9 API - " + str(error))
+
+
+# -----------------------------------------------------------------------------
+# Create the portfolio payload and post it to Cumulus9 API
+# -----------------------------------------------------------------------------
+
 # read sample portfolio ./sample_portfolio.csv
 df_portfolio = pandas.read_csv("./sample_portfolio.csv", dtype=str, na_filter=False)
+
 
 # function for adjusting a date by a specified offset of days
 def get_date_offset(input_date, offset):
@@ -74,13 +116,14 @@ def calculate_portfolio_margin(df_portfolio):
         "client_secret": c9_api_client_secret,
     }
     # post portfolio and receive the margin results in json format
-    results_json = cumulus9.post("/portfolios", portfolio_payload, api_credentials).json()
+    results_json = post("/portfolios", portfolio_payload, api_credentials).json()
     # sum the initial margin for all portfolios
     total_margin = 0
     for i in results_json["data"]:
         total_margin += i["initial_margin"]
     # return the total margin
     return total_margin
+
 
 # margin for the original portfolio
 margin_portfolio = calculate_portfolio_margin(df_portfolio)
