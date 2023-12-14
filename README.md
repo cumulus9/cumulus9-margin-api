@@ -46,7 +46,7 @@ Sample portfolio payload (change only the portfolio section as needed):
     "vendor_symbology": "clearing",
     "calculation_type": "margins",
     "execution_mode": "sync",
-    // "cme_symbology":  "globex",
+    "cme_symbology": "clearing",
     "portfolio": [
         {
             "account_code": "Account 001",
@@ -87,6 +87,15 @@ Sample portfolio payload (change only the portfolio section as needed):
     ]
 }
 ```
+
+Calculation Parameters:
+
+-   `vendor_symbology`: `ion`, `clearing`, `bloomberg`, `gmi` | default: `clearing`
+-   `calculation_type`: `margins`, `analytics`, `all` | default: `all`
+-   `cme_symbology`: `globex`, `clearing`
+-   `execution_mode`: `sync`, `async` | default: `sync`
+-   `request_id`: UUID | default: random uuid
+-   `bdate`: date in format YYYYMMDD | default: today
 
 Post Request:
 
