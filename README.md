@@ -115,12 +115,13 @@ The API currently supports both ETD contracts and Fixed Income Cash contracts. F
 
 Calculation Parameters:
 
--   `vendor_symbology`: `ion`, `clearing`, `bloomberg`, `gmi` | default: `clearing`
 -   `calculation_type`: `margins`, `analytics`, `all` | default: `all`
--   `cme_symbology`: `globex`, `clearing`
+-   `use_closest_match`: `false`, `true` | default: `true`
 -   `execution_mode`: `sync`, `async` | default: `sync`
+-   `vendor_symbology`: `ion`, `clearing`, `bloomberg`, `gmi` | default: `clearing`
+-   `cme_symbology`: `globex`, `clearing`
+-   `bdate`: date in format YYYYMMDD | default: calculation date
 -   `request_id`: UUID | default: random uuid
--   `bdate`: date in format YYYYMMDD | default: today
 -   `pnl_details`: `false`, `true` | default: `false` (create cache data for the entire pnl vector)
 
 Post Request:
