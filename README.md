@@ -123,6 +123,16 @@ Calculation Parameters:
 -   `bdate`: date in format YYYYMMDD | default: calculation date
 -   `request_id`: UUID | default: random uuid
 -   `pnl_details`: `false`, `true` | default: `false` (create cache data for the entire pnl vector)
+-   `risk_metrics`:
+
+    ```json
+    {
+        "lookback": 1000, # lookback period
+        "ci": 99, # confidence interval
+        "method": "expected-shortfall",  # expected-shortfall | value-at-risk,
+        "mpor": 1, # margin period of risk
+    }
+    ```
 
 Post Request:
 
