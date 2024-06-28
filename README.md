@@ -45,7 +45,7 @@ Sample portfolio payload (change only the portfolio section as needed):
 
 ```json
 {
-    "vendor_symbology": "clearing",
+    "vendor_used": "clearing",
     "calculation_type": "margins",
     "execution_mode": "sync",
     "cme_symbology": "clearing",
@@ -103,6 +103,24 @@ Sample portfolio payload (change only the portfolio section as needed):
             "coupon_payment_pct": "4",
             "coupon_frequency": "2",
             "notional": "-1000000"
+        },
+        {
+            "valuation_date": "16/06/2023",
+            "end_date": "18/09/2023",
+            "account_code": "Fund1_1234",
+            "im_model": "SIMM",
+            "trade_id": 2.0,
+            "product_class": "RatesFX",
+            "risk_type": "Risk_IRCurve",
+            "qualifier": "USD",
+            "bucket": "1",
+            "label1": "15Y",
+            "label2": "OIS",
+            "collect_regulations": "CFTC,ESA",
+            "post_regulations": "NONREG,CFTC,ESA",
+            "amount": 0.737256516,
+            "amount_currency": "USD",
+            "amount_usd": 0.737256516
         }
     ]
 }
@@ -118,7 +136,7 @@ Calculation Parameters:
 -   `calculation_type`: `margins`, `analytics`, `all` | default: `all`
 -   `use_closest_match`: `false`, `true` | default: `true`
 -   `execution_mode`: `sync`, `async` | default: `sync`
--   `vendor_symbology`: `ion`, `clearing`, `bloomberg`, `gmi` | default: `clearing`
+-   `vendor_used`: `ion`, `clearing`, `bloomberg`, `gmi` | default: `clearing`
 -   `cme_symbology`: `globex`, `clearing`
 -   `bdate`: date in format YYYYMMDD | default: calculation date
 -   `request_id`: UUID | default: random uuid
