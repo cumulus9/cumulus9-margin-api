@@ -126,21 +126,23 @@ Sample portfolio payload (change only the portfolio section as needed):
 }
 ```
 
-The API currently supports both ETD contracts and Fixed Income Cash contracts. For each contract type, the required fields are as follows:
+The API currently supports ETD and Fixed Income Cash contracts and ISDA’s Common Risk Interchange Format (CRIF) positions. For each type, the required fields are as follows:
 
 -   ETD contracts colums: `account_code, exchange_code, contract_code, contract_type, contract_expiry, contract_strike, net_position`
 -   Fixed Income Cash contracts colums: `account_code, exchange_code, contract_code, contract_type, contract_expiry, contract_strike, net_position`
+-   CRIF colums: `valuation_date, end_date, account_code, im_model, trade_id, product_class, risk_type, qualifier, bucket, label1, label2, collect_regulations, post_regulations, amount, amount_currency, amount_usd`
 
 Calculation Parameters:
 
 -   `calculation_type`: `margins`, `analytics`, `all` | default: `all`
 -   `use_closest_match`: `false`, `true` | default: `true`
 -   `execution_mode`: `sync`, `async` | default: `sync`
--   `vendor_used`: `ion`, `clearing`, `bloomberg`, `gmi` | default: `clearing`
+-   `vendor_used`: `ion`, `clearing`, `bloomberg`, `gmi`, `tt_new` | default: `clearing`
 -   `cme_symbology`: `globex`, `clearing`
 -   `bdate`: date in format YYYYMMDD | default: calculation date
 -   `request_id`: UUID | default: random uuid
 -   `pnl_details`: `false`, `true` | default: `false` (create cache data for the entire pnl vector)
+
 -   `risk_metrics`:
 
     ```json
@@ -149,6 +151,15 @@ Calculation Parameters:
         "ci": 99, # confidence interval
         "method": "expected-shortfall",  # expected-shortfall | value-at-risk,
         "mpor": 1, # margin period of risk
+    }
+    ```
+
+-   `simm_metrics`:
+
+    ```json
+    {
+        "version": "2_6_5", # SIMM version using underscore instead of dots, e.g. 2_6_5 for 2.6.5
+        "holding_period": 10 # holding period in days, either 1 or 10 days
     }
     ```
 
