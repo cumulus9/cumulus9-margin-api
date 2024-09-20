@@ -57,7 +57,8 @@ Sample portfolio payload (change only the portfolio section as needed):
             "contract_type": "F",
             "contract_expiry": "DEC-25",
             "contract_strike": "",
-            "net_position": "500"
+            "net_position": "500",
+            "account_type": "H"
         },
         {
             "account_code": "Account 001",
@@ -66,7 +67,8 @@ Sample portfolio payload (change only the portfolio section as needed):
             "contract_type": "Future",
             "contract_expiry": "DEC-25",
             "contract_strike": "",
-            "net_position": "500"
+            "net_position": "500",
+            "account_type": "H"
         },
         {
             "account_code": "Account 001",
@@ -75,7 +77,8 @@ Sample portfolio payload (change only the portfolio section as needed):
             "contract_type": "CALL",
             "contract_expiry": "202512",
             "contract_strike": "50.1",
-            "net_position": "-1000"
+            "net_position": "-1000",
+            "account_type": "H"
         },
         {
             "account_code": "Account 002",
@@ -84,7 +87,8 @@ Sample portfolio payload (change only the portfolio section as needed):
             "contract_type": "FUT",
             "contract_expiry": "202612",
             "contract_strike": "",
-            "net_position": "-50"
+            "net_position": "-50",
+            "account_type": "H"
         },
         {
             "account_code": "Account 002",
@@ -128,9 +132,11 @@ Sample portfolio payload (change only the portfolio section as needed):
 
 The API currently supports ETD and Fixed Income Cash contracts and ISDA’s Common Risk Interchange Format (CRIF) positions. For each type, the required fields are as follows:
 
--   ETD contracts colums: `account_code, exchange_code, contract_code, contract_type, contract_expiry, contract_strike, net_position`
+-   ETD contracts colums: `account_code, exchange_code, contract_code, contract_type, contract_expiry, contract_strike, net_position, account_type`
 -   Fixed Income Cash contracts colums: `account_code, exchange_code, contract_code, contract_type, contract_expiry, contract_strike, net_position`
 -   CRIF colums: `valuation_date, end_date, account_code, im_model, trade_id, product_class, risk_type, qualifier, bucket, label1, label2, collect_regulations, post_regulations, amount, amount_currency, amount_usd`
+
+On ETD contracts columns, account_type: `H` for hedge, `S` for speculative
 
 Calculation Parameters:
 
