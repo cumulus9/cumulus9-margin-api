@@ -1,0 +1,3 @@
+account_code,product_class,risk_type,qualifier,bucket,label1,label2,amount_usd
+Account ABC,RatesFX,Risk_IRCurve,JPY,1,15Y,OIS,1000000000
+Account ABC,RatesFX,Risk_IRCurve,JPY,1,30Y,OIS,-10000000
