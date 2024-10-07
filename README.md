@@ -143,7 +143,7 @@ Calculation Parameters:
 -   `calculation_type`: `margins`, `analytics`, `all` | default: `all`
 -   `use_closest_match`: `false`, `true` | default: `true`
 -   `execution_mode`: `sync`, `async` | default: `sync`
--   `vendor_used`: `ion`, `clearing`, `bloomberg`, `gmi`, `tt_new` | default: `clearing`
+-   `vendor_symbology`: `ion`, `clearing`, `bloomberg`, `gmi`, `tt_new` | default: `clearing`
 -   `cme_symbology`: `globex`, `clearing`
 -   `bdate`: date in format YYYYMMDD | default: calculation date
 -   `request_id`: UUID | default: random uuid
@@ -156,7 +156,7 @@ Calculation Parameters:
         "lookback": 1000, # lookback period
         "ci": 99, # confidence interval
         "method": "expected-shortfall",  # expected-shortfall | value-at-risk,
-        "mpor": 1, # margin period of risk
+        "mpor": 1 # margin period of risk
     }
     ```
 
@@ -169,6 +169,15 @@ Calculation Parameters:
     }
     ```
 
+-   `stress_sensitivities`
+
+    ```json
+        {
+            "underlying_shocks": [-0.2, -0.1, -0.05, -0.01, 0.01, 0.05, 0.1, 0.2] # shocks for underlying,
+            "volatility_shock": [0, 0, 0, 0, 0, 0, 0, 0] # shocks for volatility
+        }
+    ```
+
 Post Request:
 
 ```txt
@@ -179,6 +188,14 @@ Request: `POST ${c9_api_endpoint}/portfolios`
 ```
 
 You will receive the margin in the response and calculation drill-down explaining the offsets applied.
+
+## Performances
+
+DEMO users on a free trial can process up to 100 portfolios per minute.
+
+PRO users can handle up to 1,000 portfolios per second.
+
+Enterprise users can process more than 1,000 portfolios per second, with additional fees for scaling through parallel instances to manage the increased load.
 
 ## [About Us](https://cumulus9.com)
 
