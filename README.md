@@ -189,6 +189,28 @@ Request: `POST ${c9_api_endpoint}/portfolios`
 
 You will receive the margin in the response and calculation drill-down explaining the offsets applied.
 
+## IRM, SPAN and SPAN 2 Account Types
+
+| account_type | description                              |
+| ------------ | ---------------------------------------- |
+| S            | Speculator                               |
+| H            | Hedger                                   |
+| M            | Member                                   |
+| HRP          | Heightened Risk Profile (SPAN2 only)     |
+| NHRP         | Non-Heightened Risk Profile (SPAN2 only) |
+
+The CME Group's [Advisory 20-404](https://www.cmegroup.com/notices/clearing/2020/10/Chadv20-404.pdf) outlines changes to account classifications in response to revised CFTC regulations effective January 27, 2021.
+
+The traditional `Speculator` (S) and `Hedger` (H) categories are being redefined to `Heightened Risk Profile` (HRP) and `Non-Heightened Risk Profile` (NHRP) accounts, respectively, affecting margin requirements and reporting formats.
+
+## KRX Account Types
+
+| account_type | description        |
+| ------------ | ------------------ |
+| C            | Customer Margin    |
+| M            | Maintenance Margin |
+| H            | Member Margin      |
+
 ## Performances
 
 DEMO users on a free trial can process up to 100 portfolios per minute.
