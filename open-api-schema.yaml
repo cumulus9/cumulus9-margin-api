@@ -1,0 +1,572 @@
+openapi: '3.0.0'
+info:
+    version: 'v1.0'
+    title: 'Cumulus9 Margin API'
+    description: |
+        The Cumulus9 Margin API lets you build margin analytics integrations. Our API follows a [resource-oriented](https://en.wikipedia.org/wiki/Resource-oriented_architecture) architecture with predictable [REST API](https://en.wikipedia.org/wiki/Representational_state_transfer) URLs, making use of standard HTTP verbs, and response codes.
+        ###### Getting Started
+        - Request an access token from the Authorization Server, using your Client ID and Client Secret with Basic authentication.
+        - Use the obtained access token, as Bearer token, to make all API calls from the Resource Server.
+tags:
+    - name: authentication
+      description: OAuth 2.0 token endpoint.
+    - name: margin
+      description: Margin requirements calculation
+servers:
+    - url: '{{baseUrl}}'
+      description: Resource Server
+paths:
+    /token:
+        post:
+            summary: Request an access token
+            description: Request an OAuth 2.0 Access Token. Client ID and Client Secret are needed for the Basic Authentication.
+            operationId: getToken
+            tags:
+                - authentication
+            security:
+                - basicAuth: []
+            servers:
+                - url: '{{authUrl}}'
+                  description: Authorization Server
+            requestBody:
+                required: true
+                content:
+                    application/x-www-form-urlencoded:
+                        schema:
+                            $ref: '#/components/schemas/tokenRequest'
+            responses:
+                '200':
+                    $ref: '#/components/responses/token'
+                '400':
+                    $ref: '#/components/responses/authError'
+    /portfolios:
+        post:
+            summary: Calculate portfolio margin
+            description: Calculate the margin requirements for multi-account and multi-exchange portfolios.
+            operationId: calculateMargin
+            tags:
+                - margin
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/portfolios'
+            responses:
+                '200':
+                    $ref: '#/components/responses/results'
+                '400':
+                    $ref: '#/components/responses/badRequestError'
+                '401':
+                    $ref: '#/components/responses/unauthorizedError'
+                '500':
+                    $ref: '#/components/responses/internalServerError'
+components:
+    schemas:
+        tokenRequest:
+            description: Token request body.
+            type: object
+            required:
+                - grant_type
+            properties:
+                grant_type:
+                    description: OAuth 2.0 Client Credentials grant flow
+                    type: string
+                    enum:
+                        - client_credentials
+                    default: client_credentials
+                    example: client_credentials
+                scope:
+                    description: OAuth 2.0 scopes.
+                    type: string
+                    enum:
+                        - riskcalc/get
+                    default: riskcalc/get
+                    example: riskcalc/get
+        token:
+            description: Access Token.
+            type: object
+            properties:
+                access_token:
+                    description: OAuth 2.0 Access Token.
+                    type: string
+                    example: eyJraWQiOiJ3RGk0UdzM4ZDJyI6IlJTMjU2In0.eyJzdWIiOiIxam5nNDRtcjdyazRmN2dtam1lYjZwZGYzcyIsInRva2VuX3VzZSI6ImFjY2VzcyIsInNjb3BlIjoicmlza2NhbGNcL2dldCIsImF1dGhfdGltZSI6MTY2NjI3MTE3NCwiaXNzIjoiaHR0cHM6XC9cL2NvZ25pdG8taWRwLmV1LXdlc3QtMi5hbWF6b25hd3MuY29tXC9ldS13ZXN0LTJfR3pDM1pPREk0IiwiZXhwIjoxNjY2MzU3NTc0LCJpYXQiOjE2NjYyNzExNzQsInZlcnNpb24iOjIsImp0aSI6IjQwMDU2ZGI4LWY2MDUtNDhhZC1iOTICI6IjFqbmc0NG1yN3JrNGY3Z21qbWViNnBkZjNzIn0.uelOjQ6n84-PpzO6Ea40dr4pWFoYnWYRiAtfERnfvKYim8-lkJ-tUr4suALP7bXAkaY4GOdLnBkcGEFdWA4pk-B982Yivk5OUZodM9Znp5k6MhuhiYPS3VCLl_NND5yuQ8CPT58K9PaxW-wxA_68EHM2J3pZdRO4Df0S7m_QKFEfhVUy11fJMf7oRGG-eTUilZMANAMbTc8O_i74cxz_UHiiNf37fdjXGVsZhCDADKmEECvnlG0DooYudKlVSmm0dR9duRsGGok_4poAqCajqBqgNn12buEo8WTVZR8zjpp3oHCrG2rg
+                expires_in:
+                    description: Token expiry, in seconds.
+                    type: integer
+                    minimum: 0
+                    example: 86400
+                token_type:
+                    description: Bearer token type.
+                    type: string
+                    enum:
+                        - Bearer
+                    default: Bearer
+                    example: Bearer
+        portfolios:
+            description: Portfolio payload, multi-account positions.
+            type: object
+            required:
+                - portfolio
+            properties:
+                calculation_type:
+                    type: string
+                    enum:
+                        - margins
+                        - analytics
+                        - all
+                    default: all
+                    example: margins
+                execution_mode:
+                    type: string
+                    enum:
+                        - sync
+                        - async
+                    default: sync
+                    example: sync
+                vendor_symbology:
+                    type: string
+                    enum:
+                        - clearing
+                        - ion
+                        - bloomberg
+                        - gmi
+                        - tt_new
+                    default: clearing
+                    example: clearing
+                cme_symbology:
+                    type: string
+                    enum:
+                        - clearing
+                        - globex
+                    default: clearing
+                    example: clearing
+                currency:
+                    description: Currency for the aggregate multi-currency results. The international 3-letter currency code, as defined by the ISO 4217 standard.
+                    type: string
+                    default: USD
+                    example: USD
+                use_closest_match:
+                    description: Allow the system to find and use the closest match contract e.g. for incorrect expiry or strike.
+                    type: boolean
+                    default: true
+                    example: true
+                bdate:
+                    description: Calculation date in format YYYYMMDD. Defaults to the latest date.
+                    type: integer
+                    example: 20250107
+                request_id:
+                    description: User-defined UUID.
+                    type: string
+                    example: '5c09862d8d690f8d821b47762ef06a6f'
+                pnl_details:
+                    description: Historical P&L details. To create cache data for the entire P&L vector.
+                    type: boolean
+                    default: false
+                    example: false
+                portfolio:
+                    type: array
+                    items:
+                        type: object
+                        required:
+                            - account_code
+                            - exchange_code
+                            - contract_code
+                            - contract_type
+                            - contract_expiry
+                            - net_position
+                        properties:
+                            account_code:
+                                description: An internal reference of the portfolio's account.
+                                type: string
+                                example: Account ABC
+                            exchange_code:
+                                description: The exchange acronym, associated with the contract.
+                                type: string
+                                example: ICE.EU
+                            contract_code:
+                                description: The contract reference code.
+                                type: string
+                                example: B
+                            contract_type:
+                                description: Contract type, one of future (FUT), call option (CALL) or put option (PUT).
+                                type: string
+                                enum:
+                                    - FUT
+                                    - CALL
+                                    - PUT
+                                example: FUT
+                            contract_expiry:
+                                description: The expiry date of the contract.
+                                type: string
+                                example: '202512'
+                            contract_strike:
+                                description: The option strike, applicable to the CALL or PUT contract types only.
+                                type: string
+                                default: ''
+                            net_position:
+                                description: The position's size.
+                                type: string
+                                example: '1000'
+                            account_type:
+                                description: Margin account clasification.
+                                type: string
+                                enum:
+                                    - H
+                                    - S
+                                default: H
+                                example: H
+            additionalProperties:
+                description: Additional optional parameters for risk metrics and sensitivities.
+                type: object
+                additionalProperties: true
+        portfolioResults:
+            description: Detailed margin results and breakdown for a single portfolio.
+            type: object
+            properties:
+                request_id:
+                    description: UUID.
+                    type: string
+                    example: '5c09862d8d690f8d821b47762ef06a6f'
+                portfolio_id:
+                    description: UUID.
+                    type: string
+                    example: 'ca6b921c04f6afa9e35608d61a0223b3'
+                username:
+                    description: The username associated with the API credentials.
+                    type: string
+                    example: '@cumulus9.com'
+                submitted_time:
+                    description: Time at which the portfolio was submitted for margin calculation.
+                    type: string
+                    format: date-time
+                    example: '2025-01-03 09:31:14.795795'
+                account_code:
+                    description: An internal reference of the portfolio's account.
+                    type: string
+                    example: Account ABC
+                price_date:
+                    description: Calculation date in format YYYYMMDD.
+                    type: integer
+                    example: 20250107
+                currency:
+                    description: Currency for the aggregate multi-currency results. The international 3-letter currency code, as defined by the ISO 4217 standard.
+                    type: string
+                    example: USD
+                initial_margin:
+                    description: The calculated margin requirements of the submitted portfolio.
+                    type: number
+                    example: 4698720
+                option_liquidation_value:
+                    description: The option liquidation value.
+                    type: number
+                    example: 0
+                value_at_risk:
+                    description: The portfolio's Value-at-Risk based on 1-day time horizon and 250-day lookback period.
+                    type: number
+                    example: 5125222
+                stress_loss:
+                    description: The portfolios worst daily loss over the past 250 days.
+                    type: number
+                    example: 5839073
+                additional_margin:
+                    description: Margin add-ons, if applicable e.g. liquidity or concentration charges.
+                    type: number
+                    example: 0
+                margin_by_ccp:
+                    description: Margin results broken down by CCP.
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            clearing_org:
+                                description: The clearing organisation code.
+                                type: string
+                                example: CME
+                            result_type:
+                                description: Margin model.
+                                type: string
+                                example: span2
+                            currency_code:
+                                description: The international 3-letter currency code, as defined by the ISO 4217 standard.
+                                type: string
+                                example: USD
+                            fxrate:
+                                description: The FX rate used to convert the multi-currency results into the base currency, USD.
+                                type: number
+                                example: 1.0
+                            initial_margin:
+                                description: The calculated margin requirements of the specific clearing house.
+                                type: number
+                                example: 1471104.47
+                            option_liquidation_value:
+                                description: The option liquidation value of the specific clearing house.
+                                type: number
+                                example: 0
+                            cross_model_offset:
+                                type: number
+                                example: -67562.73
+                margin_by_contract:
+                    description: Margin results broken down by contract.
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            clearing_org:
+                                description: The clearing organisation code.
+                                type: string
+                                example: CME
+                            result_type:
+                                description: Margin model.
+                                type: string
+                                example: span2
+                            exchange:
+                                description: The exchange code.
+                                type: string
+                                example: CME
+                            cc_code:
+                                description: The contract symbol.
+                                type: string
+                                example: NY-BZ
+                            cc_name:
+                                description: The contract name.
+                                type: string
+                                example: Brent Crude Oil
+                            sector:
+                                description: The contract sector.
+                                type: string
+                                example: Energy
+                            sub_sector:
+                                description: The contract sub-sector.
+                                type: string
+                                example: Oil
+                            currency_code:
+                                description: The international 3-letter currency code, as defined by the ISO 4217 standard.
+                                type: string
+                                example: USD
+                            fxrate:
+                                description: The FX rate used to convert the multi-currency results into the base currency, USD.
+                                type: number
+                                example: 1.0
+                            initial_margin:
+                                description: The calculated margin requirements of the specific contract.
+                                type: number
+                                example: 1471104.47
+                            option_liquidation_value:
+                                description: The option liquidation value of the specific contract.
+                                type: number
+                                example: 0
+                margin_by_span:
+                    description: SPAN margin results by contract.
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            result_type:
+                                description: Margin model.
+                                type: string
+                                example: span
+                            clearing_org:
+                                description: The clearing organisation code.
+                                type: string
+                                example: CME
+                            exchange:
+                                description: The exchange code.
+                                type: string
+                                example: CME
+                            scenario:
+                                description: The SPAN scenario number.
+                                type: string
+                                example: '13'
+                            cc_code:
+                                description: The contract symbol.
+                                type: string
+                                example: NY-BZ
+                            cc_name:
+                                description: The contract name.
+                                type: string
+                                example: Brent Crude Oil
+                            currency_code:
+                                description: The international 3-letter currency code, as defined by the ISO 4217 standard.
+                                type: string
+                                example: USD
+                            initial_margin:
+                                description: The calculated margin requirements of the specific contract.
+                                type: number
+                                example: 1471104.47
+                            scanning_risk:
+                                description: The scanning risk component of the SPAN calculation.
+                                type: number
+                                example: 1471104.47
+                            prompt_date_charge:
+                                description: The prompt date charge component of the SPAN calculation.
+                                type: number
+                                example: 0
+                            intra_spread_charge:
+                                description: The intra-spread charge component of the SPAN calculation.
+                                type: number
+                                example: 0
+                            short_option_charge:
+                                description: The short option charge component of the SPAN calculation.
+                                type: number
+                                example: 0
+                            intercontract_credit:
+                                description: The inter-contract credit component of the SPAN calculation.
+                                type: number
+                                example: 0
+                            strategy_spread_charge:
+                                description: The strategy spread charge component of the SPAN calculation.
+                                type: number
+                                example: 0
+                            option_liquidation_value:
+                                description: The option liquidation value of the specific contract.
+                                type: number
+                                example: 0
+                exceptions:
+                    description: Provides a list of exceptions such as the positions that were not included in the calculations.
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            position_id:
+                                type: string
+                                example: '5'
+                            engine:
+                                type: string
+                                example: validation
+                            exception:
+                                type: string
+                                example: 'Invalid `expiry` on position ICE.EU | B - Brent Crude Futures | FUT | 202501 | 0'
+                closest_matches:
+                    description: Provides a list of positions that were updated in the calculations, if the use_closest_match parameter was set to true.
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            position_id:
+                                type: string
+                                example: '5'
+                            engine:
+                                type: string
+                                example: validation
+                            exception:
+                                type: string
+                                example: 'Applied closest matching expiry instead of loaded 202501 on position ICE.EU | B - Brent Crude Futures | FUT | 20250300 | 0'
+            additionalProperties:
+                description: Additional optional properties.
+                type: object
+                additionalProperties: true
+        results:
+            description: Margin requirement results of the submitted portfolios.
+            type: object
+            properties:
+                request_id:
+                    description: UUID.
+                    type: string
+                    example: '5c09862d8d690f8d821b47762ef06a6f'
+                username:
+                    description: The username associated with the API credentials.
+                    type: string
+                    example: '@cumulus9.com'
+                data:
+                    description: Margin results per portfolio.
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/portfolioResults'
+                runtime:
+                    description: Runtime of the request in milliseconds.
+                    type: integer
+                    example: 114
+                parameters:
+                    description: Margin models parameters.
+                    type: object
+                    additionalProperties:
+                        description: Optional parameters.
+                        type: object
+                        additionalProperties: true
+                    example:
+                        span:
+                            ICE: '20250106'
+                            LME: '20250106'
+        authError:
+            type: object
+            properties:
+                error:
+                    description: The OAuth Bad Request (400) error message.
+                    type: string
+                    example: 'invalid_client'
+                error_description:
+                    description: The OAuth error description.
+                    type: string
+                    example: 'Client authentication failed due to unknown client, no client authentication included, or unsupported authentication method.'
+        badRequestError:
+            description: Bad Request (400) error message
+            type: object
+            properties:
+                error:
+                    type: string
+                    example: Invalid request body
+        unauthorizedError:
+            description: Unauthorized (401) error message
+            type: object
+            properties:
+                error:
+                    type: object
+                    properties:
+                        message:
+                            type: string
+                            example: 'AWS Cognito: JWSInvalid rejection'
+        internalServerError:
+            description: Internal Server (500) error message
+            type: object
+            properties:
+                error:
+                    type: string
+                    example: Internal Server Error
+    responses:
+        token:
+            description: Successful response
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/token'
+        results:
+            description: Successful response
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/results'
+        authError:
+            description: Bad Request (400) error
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/authError'
+        badRequestError:
+            description: Bad Request (400) error
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/badRequestError'
+        unauthorizedError:
+            description: Unauthorized (401) error
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/unauthorizedError'
+        internalServerError:
+            description: Internal Server (500) error
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/internalServerError'
+    securitySchemes:
+        bearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+        basicAuth:
+            type: http
+            scheme: basic
+security:
+    - bearerAuth: []

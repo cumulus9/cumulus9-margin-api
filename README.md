@@ -148,6 +148,8 @@ Calculation Parameters:
 -   `bdate`: date in format YYYYMMDD | default: calculation date
 -   `request_id`: UUID | default: random uuid
 -   `pnl_details`: `false`, `true` | default: `false` (create cache data for the entire pnl vector)
+-   `in_memory`: `false`, `true` | default: `false`
+-   `currency`: `USD`, `EUR`, `GBP`, `JPY` | default: `USD`
 
 -   `risk_metrics`:
 
@@ -156,7 +158,8 @@ Calculation Parameters:
         "lookback": 1000, # lookback period
         "ci": 99, # confidence interval
         "method": "expected-shortfall",  # expected-shortfall | value-at-risk,
-        "mpor": 1 # margin period of risk
+        "mpor": 1, # margin period of risk
+        "mode": 'absolute' # absolute | relative
     }
     ```
 
