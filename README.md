@@ -149,7 +149,7 @@ Calculation Parameters:
 -   `request_id`: UUID | default: random uuid
 -   `pnl_details`: `false`, `true` | default: `false` (create cache data for the entire pnl vector)
 -   `in_memory`: `false`, `true` | default: `false`
--   `currency`: `USD`, `EUR`, `GBP`, `JPY` | default: `USD`
+-   `currency_code`: `USD`, `EUR`, `GBP`, `JPY` | default: `USD`
 
 -   `risk_metrics`:
 

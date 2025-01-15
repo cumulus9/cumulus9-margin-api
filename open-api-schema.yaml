@@ -141,7 +141,7 @@ components:
                         - globex
                     default: clearing
                     example: clearing
-                currency:
+                currency_code:
                     description: Currency for the aggregate multi-currency results. The international 3-letter currency code, as defined by the ISO 4217 standard.
                     type: string
                     default: USD
