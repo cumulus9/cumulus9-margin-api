@@ -44,7 +44,7 @@ def post(url, data, api_credentials):
         else:
             raise ValueError("HTTP", auth.status_code, "-", auth.reason)
     except Exception as error:
-        raise ValueError("Cumulus9 API - " + str(error))
+        raise ValueError("Cumulus9 API - " + str(error)) from error
 
 
 # -----------------------------------------------------------------------------

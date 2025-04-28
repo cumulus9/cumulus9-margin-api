@@ -2,6 +2,7 @@
 # Cumulus9 - All rights reserved.
 
 import base64
+import json
 import requests
 
 # please contact support@cumulus9.com to receive the below credentials
@@ -36,7 +37,7 @@ def get(url, api_credentials):
         else:
             raise ValueError("HTTP", auth.status_code, "-", auth.reason)
     except Exception as error:
-        raise ValueError("Cumulus9 API - " + str(error))
+        raise ValueError("Cumulus9 API - " + str(error)) from error
 
 
 # -----------------------------------------------------------------------------
@@ -53,7 +54,7 @@ api_credentials = {
 
 response = get("/healthcheck/analytics-engine", api_credentials)
 
-print(response.json())
+print(json.dumps(response.json(), indent=4))
 
 # -----------------------------------------------------------------------------
 # Example of the Cumulus9 API response after calling the healthcheck endpoint

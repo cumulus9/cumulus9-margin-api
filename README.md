@@ -140,7 +140,7 @@ On ETD contracts columns, account_type: `H` for hedge, `S` for speculative
 
 Calculation Parameters:
 
--   `calculation_type`: `margins`, `analytics`, `all` | default: `all`
+-   `calculation_type`: `margins`, `analytics`, `simm`, `all` | default: `all` (Note: combinations can be used, e.g. `margins,analytics`)
 -   `use_closest_match`: `false`, `true` | default: `true`
 -   `execution_mode`: `sync`, `async` | default: `sync`
 -   `vendor_symbology`: `ion`, `clearing`, `bloomberg`, `gmi`, `tt_new` | default: `clearing`
@@ -218,9 +218,9 @@ The traditional `Speculator` (S) and `Hedger` (H) categories are being redefined
 
 DEMO users on a free trial can process up to 100 portfolios per minute.
 
-PRO users can handle up to 1,000 portfolios per second.
+PRO users can handle up to 1,000 portfolios per minute.
 
-Enterprise users can process more than 1,000 portfolios per second, with additional fees for scaling through parallel instances to manage the increased load.
+Enterprise users can process more than 1,000 portfolios per minute, with additional fees for scaling through parallel instances to manage the increased load.
 
 ## [About Us](https://cumulus9.com)
 

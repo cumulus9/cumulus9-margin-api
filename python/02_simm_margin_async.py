@@ -50,7 +50,7 @@ def post(url, data):
         else:
             raise ValueError("HTTP", auth.status_code, "-", auth.reason)
     except Exception as error:
-        raise ValueError("Cumulus9 API - " + str(error))
+        raise ValueError("Cumulus9 API - " + str(error)) from error
 
 
 def get(url):
@@ -63,7 +63,7 @@ def get(url):
         else:
             raise ValueError("HTTP", auth.status_code, "-", auth.reason)
     except Exception as error:
-        raise ValueError("Cumulus9 API - " + str(error))
+        raise ValueError("Cumulus9 API - " + str(error)) from error
 
 
 # -----------------------------------------------------------------------------
@@ -115,7 +115,7 @@ request_ids = []
 # send async calculation request for given account_code
 def send_request(account_code):
     portfolio_payload = {
-        "calculation_type": "margins",
+        "calculation_type": "simm",
         "simm_metrics": {"version": "2_6_5", "holding_period": 10},
         "use_closest_match": "true",
         "execution_mode": "async",

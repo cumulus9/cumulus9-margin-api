@@ -52,7 +52,7 @@ def post(url, data, api_credentials):
         else:
             raise ValueError("HTTP", auth.status_code, "-", auth.reason)
     except Exception as error:
-        raise ValueError("Cumulus9 API - " + str(error))
+        raise ValueError("Cumulus9 API - " + str(error)) from error
 
 
 # -----------------------------------------------------------------------------
@@ -93,7 +93,7 @@ def age_portfolio(df_portfolio, days):
     # create 'is_expired' to mark expired contracts
     df_portfolio_aged["is_expired"] = df_portfolio_aged["contract_expiry"].apply(lambda x: is_expired(str(x)))
     # drop expired contracts
-    df_portfolio_aged = df_portfolio_aged[df_portfolio_aged["is_expired"] == False]
+    df_portfolio_aged = df_portfolio_aged[df_portfolio_aged["is_expired"] is False]
     # drop the 'is_expired' column
     df_portfolio_aged = df_portfolio_aged.drop(columns=["is_expired"])
     return df_portfolio_aged

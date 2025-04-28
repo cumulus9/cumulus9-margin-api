@@ -3,10 +3,8 @@
 
 
 import base64
-import pandas
 import requests
 import time
-import uuid
 
 # please contact support@cumulus9.com to receive the below credentials
 c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
@@ -18,7 +16,6 @@ c9_api_client_secret = "xxxxxxxxxxxxxxxxxx"
 new_version = "2_7"
 old_version = "2_6"
 holding_period = 10
-crif_file_path = "./sample_crif_file.csv"
 
 # -----------------------------------------------------------------------------
 # REST API functions to retrieve the Cumulus9 access token and post
@@ -46,26 +43,15 @@ def post(url, data, api_credentials):
         else:
             raise ValueError("HTTP", auth.status_code, "-", auth.reason)
     except Exception as error:
-        raise ValueError("Cumulus9 API - " + str(error))
+        raise ValueError("Cumulus9 API - " + str(error)) from error
 
 
 # -----------------------------------------------------------------------------
 # create portfolio payload
 # -----------------------------------------------------------------------------
 
-# read portfolio from csv file
-portfolio = pandas.read_csv(crif_file_path).to_dict(orient="records")
-
-# create portfolio payload
 portfolio_payload = {
-    "request_id": str(uuid.uuid4()),
-    "calculation_type": "margins",
-    "execution_mode": "sync",
-    "portfolio": portfolio,
-}
-
-portfolio_payload = {
-    "calculation_type": "margins",
+    "calculation_type": "simm",
     "use_closest_match": "true",
     "execution_mode": "sync",
     "portfolio": [
