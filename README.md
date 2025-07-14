@@ -130,13 +130,9 @@ Sample portfolio payload (change only the portfolio section as needed):
 }
 ```
 
-The API currently supports ETD and Fixed Income Cash contracts and ISDA’s Common Risk Interchange Format (CRIF) positions. For each type, the required fields are as follows:
+The API supports multiple contract types, including ETD (Exchange-Traded Derivatives), FX (Foreign Exchange), Fixed Income Cash contracts, and positions formatted according to ISDA’s Common Risk Interchange Format (CRIF).
 
--   ETD contracts colums: `account_code, exchange_code, contract_code, contract_type, contract_expiry, contract_strike, net_position, account_type`
--   Fixed Income Cash contracts colums: `account_code, exchange_code, contract_code, contract_type, contract_expiry, contract_strike, net_position`
--   CRIF colums: `valuation_date, end_date, account_code, im_model, trade_id, product_class, risk_type, qualifier, bucket, label1, label2, collect_regulations, post_regulations, amount, amount_currency, amount_usd`
-
-On ETD contracts columns, account_type: `H` for hedge, `S` for speculative
+For each contract type, the required payload fields and structures are detailed in the documentation `https://github.com/cumulus9/cumulus9-margin-api/wiki/Portfolio-Payload-Structure`.
 
 Calculation Parameters:
 
@@ -159,7 +155,9 @@ Calculation Parameters:
         "ci": 99, # confidence interval
         "method": "expected-shortfall",  # expected-shortfall | value-at-risk,
         "mpor": 1, # margin period of risk
-        "mode": 'absolute' # absolute | relative
+        "mode": 'absolute', # absolute | relative
+        "bond_pricing_version": 2, # bond pricing version
+        "bond_use_continuous_compounding": true # use continuous compounding for bond pricing or annual compounding
     }
     ```
 
