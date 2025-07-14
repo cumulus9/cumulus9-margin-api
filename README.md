@@ -132,7 +132,7 @@ Sample portfolio payload (change only the portfolio section as needed):
 
 The API supports multiple contract types, including ETD (Exchange-Traded Derivatives), FX (Foreign Exchange), Fixed Income Cash contracts, and positions formatted according to ISDA’s Common Risk Interchange Format (CRIF).
 
-For each contract type, the required payload fields and structures are detailed in the documentation `https://github.com/cumulus9/cumulus9-margin-api/wiki/Portfolio-Payload-Structure`.
+For each contract type, the required payload fields and structures are detailed in the documentation [https://github.com/cumulus9/cumulus9-margin-api/wiki/Portfolio-Payload-Structure](https://github.com/cumulus9/cumulus9-margin-api/wiki/Portfolio-Payload-Structure).
 
 Calculation Parameters:
 
