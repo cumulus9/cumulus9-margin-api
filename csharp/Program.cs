@@ -13,9 +13,7 @@ class Program
 {
     // please contact support@cumulus9.com to receive the below credentials
     private const string C9ApiEndpoint = "xxxxxxxxxxxxxxxxxx";
-    private const string C9ApiAuthEndpoint = "xxxxxxxxxxxxxxxxxx";
-    private const string C9ApiClientId = "xxxxxxxxxxxxxxxxxx";
-    private const string C9ApiClientSecret = "xxxxxxxxxxxxxxxxxx";
+    private const string C9ApiSecret = "xxxxxxxxxxxxxxxxxx";
 
     static async Task Main()
     {
@@ -64,39 +62,12 @@ class Program
             ]
         }";
 
-        var accessToken = await GetAccessToken();
-
-        var response = await PostPortfolio(portfolioPayload, accessToken);
+        var response = await PostPortfolio(portfolioPayload);
 
         Console.WriteLine(response);
     }
 
-    private static async Task<string> GetAccessToken()
-    {
-        using (var httpClient = new HttpClient())
-        {
-            var authorizationString = $"{C9ApiClientId}:{C9ApiClientSecret}";
-            var basicAuthorizationBase64 = Convert.ToBase64String(Encoding.ASCII.GetBytes(authorizationString));
-
-            httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {basicAuthorizationBase64}");
-            var data = new StringContent("grant_type=client_credentials&scope=riskcalc%2Fget", Encoding.UTF8, "application/x-www-form-urlencoded");
-
-            var response = await httpClient.PostAsync(C9ApiAuthEndpoint, data);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"Error in getting access token: {response.StatusCode}");
-                return null;
-            }
-
-            var responseBody = await response.Content.ReadAsStringAsync();
-            var tokenJson = JObject.Parse(responseBody);
-
-            return tokenJson["access_token"].ToString();
-        }
-    }
-
-    private static async Task<string> PostPortfolio(string portfolioPayload, string accessToken)
+    private static async Task<string> PostPortfolio(string portfolioPayload)
     {
         using (var httpClient = new HttpClient())
         {
@@ -104,7 +75,7 @@ class Program
             httpClient.DefaultRequestVersion = new Version(2, 0);
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("cumulus9-margin-api/1.0");
             httpClient.DefaultRequestHeaders.Accept.ParseAdd("*/*");
-            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {C9ApiSecret}");
             var content = new StringContent(portfolioPayload, Encoding.UTF8, "application/json");
             var response = await httpClient.PostAsync($"{C9ApiEndpoint}/portfolios", content);
 
