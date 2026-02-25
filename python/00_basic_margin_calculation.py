@@ -2,27 +2,34 @@
 # Cumulus9 - All rights reserved.
 
 import json
+import os
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # please contact support@cumulus9.com to receive the below credentials
-c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
-c9_api_secret = "xxxxxxxxxxxxxxxxxx"
+c9_api_endpoint = os.getenv("C9_API_ENDPOINT")
+c9_api_secret = os.getenv("C9_API_SECRET")
 
 # -----------------------------------------------------------------------------
 # REST API function to post portfolio
 # -----------------------------------------------------------------------------
 
 
-def post(url, data, api_credentials):
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + api_credentials["secret"],
-    }
-    return requests.post(
-        api_credentials["endpoint"] + url,
-        headers=headers,
-        json=data,
-    )
+def post(url, data):
+    try:
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + c9_api_secret,
+        }
+        return requests.post(
+            c9_api_endpoint + url,
+            headers=headers,
+            json=data,
+        )
+    except Exception as error:
+        raise ValueError("Cumulus9 API - " + str(error)) from error
 
 
 # -----------------------------------------------------------------------------
@@ -48,14 +55,8 @@ portfolio_payload = {
     ],
 }
 
-# create credentials dictionary
-api_credentials = {
-    "endpoint": c9_api_endpoint,
-    "secret": c9_api_secret,
-}
-
 # post portfolio and receive the margin results in json format
-results_json = post("/portfolios", portfolio_payload, api_credentials).json()
+results_json = post("/portfolios", portfolio_payload).json()
 
 print(json.dumps(results_json))
 
