@@ -44,11 +44,9 @@ components:
                 - portfolio
             properties:
                 calculation_type:
+                    description: Calculation modes. Supported values are `margins`, `analytics`, `simm`, `all` (default `all`). Combinations are supported, e.g. `margins,analytics`.
                     type: string
-                    enum:
-                        - margins
-                        - analytics
-                        - all
+                    pattern: '^(all|margins|analytics|simm)(,(margins|analytics|simm))*$'
                     default: all
                     example: margins
                 execution_mode:
@@ -87,17 +85,102 @@ components:
                     example: true
                 bdate:
                     description: Calculation date in format YYYYMMDD. Defaults to the latest date.
-                    type: integer
-                    example: 20250107
-                request_id:
-                    description: User-defined UUID.
                     type: string
-                    example: '5c09862d8d690f8d821b47762ef06a6f'
+                    pattern: '^\d{8}$'
+                    example: '20250107'
+                request_id:
+                    description: User-defined UUID. If omitted, a random UUID is generated.
+                    type: string
+                    format: uuid
+                    example: '5c09862d-8d69-0f8d-821b-47762ef06a6f'
                 pnl_details:
                     description: Historical P&L details. To create cache data for the entire P&L vector.
                     type: boolean
                     default: false
                     example: false
+                in_memory:
+                    description: Process request using in-memory mode when enabled.
+                    type: boolean
+                    default: false
+                    example: false
+                risk_metrics:
+                    description: Analytics configuration object. Used when `calculation_type` includes `analytics`.
+                    type: object
+                    properties:
+                        lookback:
+                            type: integer
+                            example: 1000
+                        ci:
+                            type: number
+                            example: 99
+                        method:
+                            type: string
+                            enum:
+                                - expected-shortfall
+                                - value-at-risk
+                            example: expected-shortfall
+                        mpor:
+                            type: integer
+                            example: 1
+                        mode:
+                            type: string
+                            enum:
+                                - absolute
+                                - relative
+                            example: absolute
+                        bond_pricing_version:
+                            type: integer
+                            example: 2
+                        bond_use_continuous_compounding:
+                            type: boolean
+                            example: true
+                    additionalProperties: true
+                simm_metrics:
+                    description: SIMM calculation configuration object. Used when `calculation_type` includes `simm`.
+                    type: object
+                    properties:
+                        version:
+                            type: string
+                            description: SIMM version using underscore instead of dots (for example `2_6_5`).
+                            example: '2_6_5'
+                        holding_period:
+                            type: integer
+                            enum:
+                                - 1
+                                - 10
+                            example: 10
+                    additionalProperties: true
+                stress_sensitivities:
+                    description: Stress sensitivities configuration object. Optional, used when `calculation_type` includes `analytics`.
+                    type: object
+                    properties:
+                        underlying_shocks:
+                            type: array
+                            items:
+                                type: number
+                            example:
+                                - -0.2
+                                - -0.1
+                                - -0.05
+                                - -0.01
+                                - 0.01
+                                - 0.05
+                                - 0.1
+                                - 0.2
+                        volatility_shock:
+                            type: array
+                            items:
+                                type: number
+                            example:
+                                - 0
+                                - 0
+                                - 0
+                                - 0
+                                - 0
+                                - 0
+                                - 0
+                                - 0
+                    additionalProperties: true
                 portfolio:
                     type: array
                     items:
@@ -151,7 +234,7 @@ components:
                                 default: H
                                 example: H
             additionalProperties:
-                description: Additional optional parameters for risk metrics and sensitivities.
+                description: Additional optional parameters.
                 type: object
                 additionalProperties: true
         portfolioResults:
