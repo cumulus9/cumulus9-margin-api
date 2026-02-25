@@ -5,40 +5,14 @@ info:
     description: |
         The Cumulus9 Margin API lets you build margin analytics integrations. Our API follows a [resource-oriented](https://en.wikipedia.org/wiki/Resource-oriented_architecture) architecture with predictable [REST API](https://en.wikipedia.org/wiki/Representational_state_transfer) URLs, making use of standard HTTP verbs, and response codes.
         ###### Getting Started
-        - Request an access token from the Authorization Server, using your Client ID and Client Secret with Basic authentication.
-        - Use the obtained access token, as Bearer token, to make all API calls from the Resource Server.
+        - Use your API Key as a Bearer token for all API calls.
 tags:
-    - name: authentication
-      description: OAuth 2.0 token endpoint.
     - name: margin
       description: Margin requirements calculation
 servers:
     - url: '{{baseUrl}}'
       description: Resource Server
 paths:
-    /token:
-        post:
-            summary: Request an access token
-            description: Request an OAuth 2.0 Access Token. Client ID and Client Secret are needed for the Basic Authentication.
-            operationId: getToken
-            tags:
-                - authentication
-            security:
-                - basicAuth: []
-            servers:
-                - url: '{{authUrl}}'
-                  description: Authorization Server
-            requestBody:
-                required: true
-                content:
-                    application/x-www-form-urlencoded:
-                        schema:
-                            $ref: '#/components/schemas/tokenRequest'
-            responses:
-                '200':
-                    $ref: '#/components/responses/token'
-                '400':
-                    $ref: '#/components/responses/authError'
     /portfolios:
         post:
             summary: Calculate portfolio margin
@@ -63,46 +37,6 @@ paths:
                     $ref: '#/components/responses/internalServerError'
 components:
     schemas:
-        tokenRequest:
-            description: Token request body.
-            type: object
-            required:
-                - grant_type
-            properties:
-                grant_type:
-                    description: OAuth 2.0 Client Credentials grant flow
-                    type: string
-                    enum:
-                        - client_credentials
-                    default: client_credentials
-                    example: client_credentials
-                scope:
-                    description: OAuth 2.0 scopes.
-                    type: string
-                    enum:
-                        - riskcalc/get
-                    default: riskcalc/get
-                    example: riskcalc/get
-        token:
-            description: Access Token.
-            type: object
-            properties:
-                access_token:
-                    description: OAuth 2.0 Access Token.
-                    type: string
-                    example: eyJraWQiOiJ3RGk0UdzM4ZDJyI6IlJTMjU2In0.eyJzdWIiOiIxam5nNDRtcjdyazRmN2dtam1lYjZwZGYzcyIsInRva2VuX3VzZSI6ImFjY2VzcyIsInNjb3BlIjoicmlza2NhbGNcL2dldCIsImF1dGhfdGltZSI6MTY2NjI3MTE3NCwiaXNzIjoiaHR0cHM6XC9cL2NvZ25pdG8taWRwLmV1LXdlc3QtMi5hbWF6b25hd3MuY29tXC9ldS13ZXN0LTJfR3pDM1pPREk0IiwiZXhwIjoxNjY2MzU3NTc0LCJpYXQiOjE2NjYyNzExNzQsInZlcnNpb24iOjIsImp0aSI6IjQwMDU2ZGI4LWY2MDUtNDhhZC1iOTICI6IjFqbmc0NG1yN3JrNGY3Z21qbWViNnBkZjNzIn0.uelOjQ6n84-PpzO6Ea40dr4pWFoYnWYRiAtfERnfvKYim8-lkJ-tUr4suALP7bXAkaY4GOdLnBkcGEFdWA4pk-B982Yivk5OUZodM9Znp5k6MhuhiYPS3VCLl_NND5yuQ8CPT58K9PaxW-wxA_68EHM2J3pZdRO4Df0S7m_QKFEfhVUy11fJMf7oRGG-eTUilZMANAMbTc8O_i74cxz_UHiiNf37fdjXGVsZhCDADKmEECvnlG0DooYudKlVSmm0dR9duRsGGok_4poAqCajqBqgNn12buEo8WTVZR8zjpp3oHCrG2rg
-                expires_in:
-                    description: Token expiry, in seconds.
-                    type: integer
-                    minimum: 0
-                    example: 86400
-                token_type:
-                    description: Bearer token type.
-                    type: string
-                    enum:
-                        - Bearer
-                    default: Bearer
-                    example: Bearer
         portfolios:
             description: Portfolio payload, multi-account positions.
             type: object
@@ -488,17 +422,6 @@ components:
                         span:
                             ICE: '20250106'
                             LME: '20250106'
-        authError:
-            type: object
-            properties:
-                error:
-                    description: The OAuth Bad Request (400) error message.
-                    type: string
-                    example: 'invalid_client'
-                error_description:
-                    description: The OAuth error description.
-                    type: string
-                    example: 'Client authentication failed due to unknown client, no client authentication included, or unsupported authentication method.'
         badRequestError:
             description: Bad Request (400) error message
             type: object
@@ -524,24 +447,12 @@ components:
                     type: string
                     example: Internal Server Error
     responses:
-        token:
-            description: Successful response
-            content:
-                application/json:
-                    schema:
-                        $ref: '#/components/schemas/token'
         results:
             description: Successful response
             content:
                 application/json:
                     schema:
                         $ref: '#/components/schemas/results'
-        authError:
-            description: Bad Request (400) error
-            content:
-                application/json:
-                    schema:
-                        $ref: '#/components/schemas/authError'
         badRequestError:
             description: Bad Request (400) error
             content:
@@ -564,9 +475,6 @@ components:
         bearerAuth:
             type: http
             scheme: bearer
-            bearerFormat: JWT
-        basicAuth:
-            type: http
-            scheme: basic
+            description: API Key provided as a Bearer token in the Authorization header.
 security:
     - bearerAuth: []
