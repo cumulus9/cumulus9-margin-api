@@ -22,24 +22,13 @@ If you prefer a different language, please email us and we will add it as an opt
 
 ## How it works
 
-The Cumulus9 Analytics API is a user-friendly RESTful API that can be accessed from any programming language. The API is secured with OAuth2.
+The Cumulus9 Analytics API is a user-friendly RESTful API that can be accessed from any programming language. The API is secured with an API Key provided by Cumulus9.
 
-You can easily utilize this API by sending a POST request to obtain an access token, which you can then use to POST your portfolios and receive the margin results almost instantaneously.
+You can easily utilize this API by using the API Key as a Bearer token and posting your portfolios to receive the margin results almost instantaneously.
 
-Once you obtain from `support@cumulus9.com` your credentials: `c9_api_endpoint`, `c9_api_auth_endpoint`, `c9_api_client_id`, `c9_api_client_secret`, you can start using the API.
+Once you obtain from `support@cumulus9.com` your credentials: `c9_api_endpoint`, `c9_api_secret`, you can start using the API.
 
-### Step 1: POST Request to Obtain an Access Token
-
-Post Request:
-
-```txt
-Headers: `Authorization: Basic BASE64(${c9_api_client_id}:${c9_api_client_secret})`
-Content-Type: `application/x-www-form-urlencoded`
-Data: `grant_type=client_credentials&scope=riskcalc%2Fget`
-Request: `POST ${c9_api_auth_endpoint}`
-```
-
-### Step 2: POST Request to Submit Your Portfolio and Receive Analytics Results
+### POST Request: Submit Your Portfolio and Receive Analytics Results
 
 Sample portfolio payload (change only the portfolio section as needed):
 
@@ -182,7 +171,7 @@ Calculation Parameters:
 Post Request:
 
 ```txt
-Headers: `Authorization: Use the format Bearer ${access_token}`
+Headers: `Authorization: Use the format Bearer ${c9_api_secret}`
 Content-Type: `application/json`
 Data: `portfolio payload`
 Request: `POST ${c9_api_endpoint}/portfolios`

@@ -4,9 +4,7 @@
 
 # please contact support@cumulus9.com to receive the below credentials
 c9_api_endpoint="xxxxxxxxxxxxxxxxxx"
-c9_api_auth_endpoint="xxxxxxxxxxxxxxxxxx"
-c9_api_client_id="xxxxxxxxxxxxxxxxxx"
-c9_api_client_secret="xxxxxxxxxxxxxxxxxx"
+c9_api_secret="xxxxxxxxxxxxxxxxxx"
 
 # example of portfolio payload
 portfolio_payload='
@@ -54,14 +52,8 @@ portfolio_payload='
     ]
 }'
 
-# retrieve access token
-basic_authorization_base64=$(echo -n "$c9_api_client_id:$c9_api_client_secret" | base64)
-headers=("Authorization: Basic $basic_authorization_base64" "Content-Type: application/x-www-form-urlencoded")
-data="grant_type=client_credentials&scope=riskcalc%2Fget"
-access_token=$(curl -s -X POST "$c9_api_auth_endpoint" -H "${headers[1]}" -H "${headers[2]}" -d "$data" | jq -r ".access_token")
-
 # post portfolio
-headers=("Content-Type: application/json" "Authorization: Bearer $access_token")
+headers=("Content-Type: application/json" "Authorization: Bearer $c9_api_secret")
 response=$(curl -s -X POST "$c9_api_endpoint/portfolios" -H "${headers[1]}" -H "${headers[2]}" -d "$portfolio_payload" | jq)
 
 echo $response

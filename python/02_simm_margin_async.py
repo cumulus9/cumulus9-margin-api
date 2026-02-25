@@ -4,64 +4,35 @@
 # This script demonstrates how to submit a portfolio containing multiple accounts in asynchronous mode, enabling the concurrent processing of a large volume of calculations.
 # Note: The Cumulus9 API imposes a default limit of 100 calculation requests per minute per user, but this rate can be adjusted for individual users upon request.
 
-import base64
 import concurrent.futures
+from dotenv import load_dotenv
+import os
 import random
 import requests
 import time
 
+load_dotenv()
+
 # please contact support@cumulus9.com to receive the below credentials
-c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
-c9_api_auth_endpoint = "xxxxxxxxxxxxxxxxxx"
-c9_api_client_id = "xxxxxxxxxxxxxxxxxx"
-c9_api_client_secret = "xxxxxxxxxxxxxxxxxx"
+c9_api_endpoint = os.getenv("C9_API_ENDPOINT")
+c9_api_secret = os.getenv("C9_API_SECRET")
 
 # -----------------------------------------------------------------------------
-# REST API functions to retrieve the Cumulus9 access token and post portfolio
+# REST API functions to post and retrieve data
 # -----------------------------------------------------------------------------
-
-# create credentials dictionary
-api_credentials = {
-    "endpoint": c9_api_endpoint,
-    "auth_endpoint": c9_api_auth_endpoint,
-    "client_id": c9_api_client_id,
-    "client_secret": c9_api_client_secret,
-}
-
-
-def get_access_token():
-    basic_authorization_bytes = (api_credentials["client_id"] + ":" + api_credentials["client_secret"]).encode("ascii")
-    basic_authorization_base64 = base64.b64encode(basic_authorization_bytes)
-    headers = {
-        "Authorization": "Basic " + basic_authorization_base64.decode("utf-8"),
-        "Content-Type": "application/x-www-form-urlencoded",
-    }
-    data = "grant_type=client_credentials&scope=riskcalc%2Fget"
-    return requests.post(api_credentials["auth_endpoint"], headers=headers, data=data)
-
 
 def post(url, data):
     try:
-        auth = get_access_token()
-        if auth.status_code == 200:
-            access_token = auth.json()["access_token"]
-            headers = {"Content-Type": "application/json", "Authorization": "Bearer " + access_token}
-            return requests.post(api_credentials["endpoint"] + url, headers=headers, json=data)
-        else:
-            raise ValueError("HTTP", auth.status_code, "-", auth.reason)
+        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + c9_api_secret}
+        return requests.post(c9_api_endpoint + url, headers=headers, json=data)
     except Exception as error:
         raise ValueError("Cumulus9 API - " + str(error)) from error
 
 
 def get(url):
     try:
-        auth = get_access_token()
-        if auth.status_code == 200:
-            access_token = auth.json()["access_token"]
-            headers = {"Content-Type": "application/json", "Authorization": "Bearer " + access_token}
-            return requests.get(api_credentials["endpoint"] + url, headers=headers)
-        else:
-            raise ValueError("HTTP", auth.status_code, "-", auth.reason)
+        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + c9_api_secret}
+        return requests.get(c9_api_endpoint + url, headers=headers)
     except Exception as error:
         raise ValueError("Cumulus9 API - " + str(error)) from error
 

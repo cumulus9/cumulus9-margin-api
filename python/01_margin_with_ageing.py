@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 # Cumulus9 - All rights reserved.
 
-import base64
 import datetime
 import json
+import os
 import pandas
 import requests
+from dotenv import load_dotenv
 
 """
 A proof-of-concept that can be used to estimate changes in portfolio margin as contracts near their maturity date.
@@ -13,44 +14,28 @@ This method involves decreasing the 'contract_expiry' value by a certain number 
 You can use this as a basis to develop a more sophisticated margin ageing process.
 """
 
+load_dotenv()
+
 # please contact support@cumulus9.com to receive the below credentials
-c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
-c9_api_auth_endpoint = "xxxxxxxxxxxxxxxxxx"
-c9_api_client_id = "xxxxxxxxxxxxxxxxxx"
-c9_api_client_secret = "xxxxxxxxxxxxxxxxxx"
+c9_api_endpoint = os.getenv("C9_API_ENDPOINT")
+c9_api_secret = os.getenv("C9_API_SECRET")
 
 # -----------------------------------------------------------------------------
-# REST API functions to retrieve the Cumulus9 access token and post portfolio
+# REST API function to post portfolio
 # -----------------------------------------------------------------------------
 
 
-def get_access_token(api_credentials):
-    basic_authorization_bytes = (api_credentials["client_id"] + ":" + api_credentials["client_secret"]).encode("ascii")
-    basic_authorization_base64 = base64.b64encode(basic_authorization_bytes)
-    headers = {
-        "Authorization": "Basic " + basic_authorization_base64.decode("utf-8"),
-        "Content-Type": "application/x-www-form-urlencoded",
-    }
-    data = "grant_type=client_credentials&scope=riskcalc%2Fget"
-    return requests.post(api_credentials["auth_endpoint"], headers=headers, data=data)
-
-
-def post(url, data, api_credentials):
+def post(url, data):
     try:
-        auth = get_access_token(api_credentials)
-        if auth.status_code == 200:
-            access_token = auth.json()["access_token"]
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + access_token,
-            }
-            return requests.post(
-                api_credentials["endpoint"] + url,
-                headers=headers,
-                json=data,
-            )
-        else:
-            raise ValueError("HTTP", auth.status_code, "-", auth.reason)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + c9_api_secret,
+        }
+        return requests.post(
+            c9_api_endpoint + url,
+            headers=headers,
+            json=data,
+        )
     except Exception as error:
         raise ValueError("Cumulus9 API - " + str(error)) from error
 
@@ -93,7 +78,7 @@ def age_portfolio(df_portfolio, days):
     # create 'is_expired' to mark expired contracts
     df_portfolio_aged["is_expired"] = df_portfolio_aged["contract_expiry"].apply(lambda x: is_expired(str(x)))
     # drop expired contracts
-    df_portfolio_aged = df_portfolio_aged[df_portfolio_aged["is_expired"] is False]
+    df_portfolio_aged = df_portfolio_aged[~df_portfolio_aged["is_expired"]]
     # drop the 'is_expired' column
     df_portfolio_aged = df_portfolio_aged.drop(columns=["is_expired"])
     return df_portfolio_aged
@@ -108,15 +93,8 @@ def calculate_portfolio_margin(df_portfolio):
         "execution_mode": "sync",
         "portfolio": json.loads(df_portfolio.to_json(orient="records")),
     }
-    # create credentials dictionary
-    api_credentials = {
-        "endpoint": c9_api_endpoint,
-        "auth_endpoint": c9_api_auth_endpoint,
-        "client_id": c9_api_client_id,
-        "client_secret": c9_api_client_secret,
-    }
     # post portfolio and receive the margin results in json format
-    results_json = post("/portfolios", portfolio_payload, api_credentials).json()
+    results_json = post("/portfolios", portfolio_payload).json()
     # sum the initial margin for all portfolios
     total_margin = 0
     for i in results_json["data"]:
