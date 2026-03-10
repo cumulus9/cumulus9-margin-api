@@ -2,32 +2,22 @@
 # Cumulus9 - All rights reserved.
 
 import json
-import os
 import requests
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# please contact support@cumulus9.com to receive the below credentials
-c9_api_endpoint = os.getenv("C9_API_ENDPOINT")
-c9_api_secret = os.getenv("C9_API_SECRET")
 
 # -----------------------------------------------------------------------------
-# REST API function to post portfolio
+# REST API POST Function
 # -----------------------------------------------------------------------------
 
 
 def post(url, data):
+
+    # contact support@cumulus9.com to receive the below credentials
+    c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
+    c9_api_secret = "xxxxxxxxxxxxxxxxxx"
+
     try:
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + c9_api_secret,
-        }
-        return requests.post(
-            c9_api_endpoint + url,
-            headers=headers,
-            json=data,
-        )
+        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + c9_api_secret}
+        return requests.post(c9_api_endpoint + url, headers=headers, json=data)
     except Exception as error:
         raise ValueError("Cumulus9 API - " + str(error)) from error
 
@@ -50,8 +40,8 @@ portfolio_payload = {
             "contract_expiry": "DEC-25",
             "contract_strike": "",
             "net_position": "500",
-            "account_type":"H",
-        },
+            "account_type": "H",
+        }
     ],
 }
 

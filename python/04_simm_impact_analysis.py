@@ -1,16 +1,8 @@
 # -*- coding: utf-8 -*-
 # Cumulus9 - All rights reserved.
 
-from dotenv import load_dotenv
-import os
 import requests
 import time
-
-load_dotenv()
-
-# please contact support@cumulus9.com to receive the below credentials
-c9_api_endpoint = os.getenv("C9_API_ENDPOINT")
-c9_api_secret = os.getenv("C9_API_SECRET")
 
 # you can update the following variables to test different versions and holding periods
 new_version = "2_7"
@@ -18,14 +10,32 @@ old_version = "2_6"
 holding_period = 10
 
 # -----------------------------------------------------------------------------
-# REST API function to post
+# REST API POST/GET Function
 # -----------------------------------------------------------------------------
 
 
 def post(url, data):
+
+    # contact support@cumulus9.com to receive the below credentials
+    c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
+    c9_api_secret = "xxxxxxxxxxxxxxxxxx"
+
     try:
         headers = {"Content-Type": "application/json", "Authorization": "Bearer " + c9_api_secret}
         return requests.post(c9_api_endpoint + url, headers=headers, json=data)
+    except Exception as error:
+        raise ValueError("Cumulus9 API - " + str(error)) from error
+
+
+def get(url):
+
+    # contact support@cumulus9.com to receive the below credentials
+    c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
+    c9_api_secret = "xxxxxxxxxxxxxxxxxx"
+
+    try:
+        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + c9_api_secret}
+        return get.get(c9_api_endpoint + url, headers=headers)
     except Exception as error:
         raise ValueError("Cumulus9 API - " + str(error)) from error
 

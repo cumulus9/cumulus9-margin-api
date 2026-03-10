@@ -3,10 +3,8 @@
 
 import datetime
 import json
-import os
 import pandas
 import requests
-from dotenv import load_dotenv
 
 """
 A proof-of-concept that can be used to estimate changes in portfolio margin as contracts near their maturity date.
@@ -14,28 +12,20 @@ This method involves decreasing the 'contract_expiry' value by a certain number 
 You can use this as a basis to develop a more sophisticated margin ageing process.
 """
 
-load_dotenv()
-
-# please contact support@cumulus9.com to receive the below credentials
-c9_api_endpoint = os.getenv("C9_API_ENDPOINT")
-c9_api_secret = os.getenv("C9_API_SECRET")
-
 # -----------------------------------------------------------------------------
-# REST API function to post portfolio
+# REST API POST Function
 # -----------------------------------------------------------------------------
 
 
 def post(url, data):
+
+    # contact support@cumulus9.com to receive the below credentials
+    c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
+    c9_api_secret = "xxxxxxxxxxxxxxxxxx"
+
     try:
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + c9_api_secret,
-        }
-        return requests.post(
-            c9_api_endpoint + url,
-            headers=headers,
-            json=data,
-        )
+        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + c9_api_secret}
+        return requests.post(c9_api_endpoint + url, headers=headers, json=data)
     except Exception as error:
         raise ValueError("Cumulus9 API - " + str(error)) from error
 
@@ -78,7 +68,7 @@ def age_portfolio(df_portfolio, days):
     # create 'is_expired' to mark expired contracts
     df_portfolio_aged["is_expired"] = df_portfolio_aged["contract_expiry"].apply(lambda x: is_expired(str(x)))
     # drop expired contracts
-    df_portfolio_aged = df_portfolio_aged[~df_portfolio_aged["is_expired"]]
+    df_portfolio_aged = df_portfolio_aged[df_portfolio_aged["is_expired"] is False]
     # drop the 'is_expired' column
     df_portfolio_aged = df_portfolio_aged.drop(columns=["is_expired"])
     return df_portfolio_aged

@@ -11,7 +11,7 @@ using Newtonsoft.Json.Linq;
 
 class Program
 {
-    // please contact support@cumulus9.com to receive the below credentials
+    // contact support@cumulus9.com to receive the below credentials
     private const string C9ApiEndpoint = "xxxxxxxxxxxxxxxxxx";
     private const string C9ApiSecret = "xxxxxxxxxxxxxxxxxx";
 

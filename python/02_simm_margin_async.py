@@ -5,23 +5,21 @@
 # Note: The Cumulus9 API imposes a default limit of 100 calculation requests per minute per user, but this rate can be adjusted for individual users upon request.
 
 import concurrent.futures
-from dotenv import load_dotenv
-import os
 import random
 import requests
 import time
 
-load_dotenv()
-
-# please contact support@cumulus9.com to receive the below credentials
-c9_api_endpoint = os.getenv("C9_API_ENDPOINT")
-c9_api_secret = os.getenv("C9_API_SECRET")
-
 # -----------------------------------------------------------------------------
-# REST API functions to post and retrieve data
+# REST API POST/GET Function
 # -----------------------------------------------------------------------------
+
 
 def post(url, data):
+
+    # contact support@cumulus9.com to receive the below credentials
+    c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
+    c9_api_secret = "xxxxxxxxxxxxxxxxxx"
+
     try:
         headers = {"Content-Type": "application/json", "Authorization": "Bearer " + c9_api_secret}
         return requests.post(c9_api_endpoint + url, headers=headers, json=data)
@@ -30,9 +28,14 @@ def post(url, data):
 
 
 def get(url):
+
+    # contact support@cumulus9.com to receive the below credentials
+    c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
+    c9_api_secret = "xxxxxxxxxxxxxxxxxx"
+
     try:
         headers = {"Content-Type": "application/json", "Authorization": "Bearer " + c9_api_secret}
-        return requests.get(c9_api_endpoint + url, headers=headers)
+        return get.get(c9_api_endpoint + url, headers=headers)
     except Exception as error:
         raise ValueError("Cumulus9 API - " + str(error)) from error
 

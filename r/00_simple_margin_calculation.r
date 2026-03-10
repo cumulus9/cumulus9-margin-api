@@ -4,33 +4,40 @@
 # install the required packages if you haven't already:
 # install.packages("httr")
 # install.packages("jsonlite")
+# install.packages('base64enc')
 
 library(httr)
 library(jsonlite)
+library(base64enc)
 
-# API credentials (please contact support@cumulus9.com to receive the below credentials)
+# API credentials (contact support@cumulus9.com to receive the below credentials)
 c9_api_endpoint <- "xxxxxxxxxxxxxxxxxx"
-c9_api_secret <- "xxxxxxxxxxxxxxxxxx"
+c9_api_auth_endpoint <- "xxxxxxxxxxxxxxxxxx"
 
 # -----------------------------------------------------------------------------
-# REST API function to post portfolio
+# REST API functions to retrieve the Cumulus9 access token and post portfolio
 # -----------------------------------------------------------------------------
 
-post_portfolio <- function(url, data) {
+post_portfolio <- function(url, data, api_credentials) {
   tryCatch({
-    headers <- add_headers(
-      `Content-Type` = "application/json",
-      Authorization = paste("Bearer", c9_api_secret)
-    )
     
-    response <- POST(
-      paste0(c9_api_endpoint, url),
-      body = toJSON(data, auto_unbox = TRUE),
-      encode = "json",
-      headers
-    )
-    
-    return(response)
+    if (status_code(auth) == 200) {
+      headers <- add_headers(
+        `Content-Type` = "application/json",
+        Authorization = paste("Bearer", c9_api_secret)
+      )
+      
+      response <- POST(
+        paste0(api_credentials$endpoint, url),
+        body = toJSON(data, auto_unbox = TRUE),
+        encode = "json",
+        headers
+      )
+      
+      return(response)
+    } else {
+      stop("HTTP ", status_code(auth), " - ", http_status(auth)$message)
+    }
   }, error = function(e) {
     stop("Cumulus9 API - ", e$message)
   })
@@ -84,8 +91,14 @@ portfolio_payload <- list(
   )
 )
 
+# create credentials list
+api_credentials <- list(
+  endpoint = c9_api_endpoint,
+  auth_endpoint = c9_api_auth_endpoint,
+)
+
 # post portfolio and receive the margin results in json format
-results <- post_portfolio("/portfolios", portfolio_payload)
+results <- post_portfolio("/portfolios", portfolio_payload, api_credentials)
 results_json <- content(results, as = "parsed")
 
 # print results in JSON format
