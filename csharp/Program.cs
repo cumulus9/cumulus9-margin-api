@@ -1,27 +1,24 @@
-﻿// Cumulus9 - All rights reserved.
-
-// To run this example:
-// dotnet build && dotnet run
+// Cumulus9 - All rights reserved.
+// Basic synchronous margin calculation for an ETD portfolio.
+// Run: dotnet build && dotnet run
 
 using System;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 
 class Program
 {
-    // contact support@cumulus9.com to receive the below credentials
+    // Credentials -- contact support@cumulus9.com to obtain these.
     private const string C9ApiEndpoint = "xxxxxxxxxxxxxxxxxx";
-    private const string C9ApiSecret = "xxxxxxxxxxxxxxxxxx";
+    private const string C9ApiSecret = "sk-xxxxxxxxxxxxxxxxxx";
 
     static async Task Main()
     {
-        var portfolioPayload = @"
-        {
+        var payload = @"{
             ""vendor_symbology"": ""clearing"",
             ""calculation_type"": ""margins"",
-            ""execution_mode"": ""sync"",
             ""portfolio"": [
                 {
                     ""account_code"": ""Account 001"",
@@ -30,7 +27,8 @@ class Program
                     ""contract_type"": ""F"",
                     ""contract_expiry"": ""DEC-25"",
                     ""contract_strike"": """",
-                    ""net_position"": ""500""
+                    ""net_position"": ""500"",
+                    ""account_type"": ""H""
                 },
                 {
                     ""account_code"": ""Account 001"",
@@ -39,7 +37,8 @@ class Program
                     ""contract_type"": ""Future"",
                     ""contract_expiry"": ""DEC-25"",
                     ""contract_strike"": """",
-                    ""net_position"": ""500""
+                    ""net_position"": ""500"",
+                    ""account_type"": ""H""
                 },
                 {
                     ""account_code"": ""Account 001"",
@@ -48,7 +47,8 @@ class Program
                     ""contract_type"": ""CALL"",
                     ""contract_expiry"": ""202512"",
                     ""contract_strike"": ""50.1"",
-                    ""net_position"": ""-1000""
+                    ""net_position"": ""-1000"",
+                    ""account_type"": ""H""
                 },
                 {
                     ""account_code"": ""Account 002"",
@@ -57,39 +57,28 @@ class Program
                     ""contract_type"": ""FUT"",
                     ""contract_expiry"": ""202612"",
                     ""contract_strike"": """",
-                    ""net_position"": ""-50""
+                    ""net_position"": ""-50"",
+                    ""account_type"": ""H""
                 }
             ]
         }";
 
-        var response = await PostPortfolio(portfolioPayload);
+        using var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {C9ApiSecret}");
 
-        Console.WriteLine(response);
-    }
+        var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"{C9ApiEndpoint}/portfolios", content);
 
-    private static async Task<string> PostPortfolio(string portfolioPayload)
-    {
-        using (var httpClient = new HttpClient())
+        if (!response.IsSuccessStatusCode)
         {
-
-            httpClient.DefaultRequestVersion = new Version(2, 0);
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("cumulus9-margin-api/1.0");
-            httpClient.DefaultRequestHeaders.Accept.ParseAdd("*/*");
-            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {C9ApiSecret}");
-            var content = new StringContent(portfolioPayload, Encoding.UTF8, "application/json");
-            var response = await httpClient.PostAsync($"{C9ApiEndpoint}/portfolios", content);
-
-            Console.WriteLine(response);
-            Console.WriteLine($"{C9ApiEndpoint}/healthcheck");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"Error in posting portfolio: {response.StatusCode}");
-                return null;
-            }
-
-            var responseBody = await response.Content.ReadAsStringAsync();
-            return JObject.Parse(responseBody).ToString();
+            Console.Error.WriteLine($"Error: {response.StatusCode}");
+            return;
         }
+
+        var body = await response.Content.ReadAsStringAsync();
+        var doc = JsonDocument.Parse(body);
+        var formatted = JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = true });
+
+        Console.WriteLine(formatted);
     }
 }

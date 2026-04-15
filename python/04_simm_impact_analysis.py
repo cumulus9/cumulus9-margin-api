@@ -1,53 +1,37 @@
-# -*- coding: utf-8 -*-
 # Cumulus9 - All rights reserved.
+# SIMM version impact analysis: compare margin between two SIMM versions.
 
-import requests
 import time
+import requests
 
-# you can update the following variables to test different versions and holding periods
-new_version = "2_7"
-old_version = "2_6"
-holding_period = 10
+# Credentials -- contact support@cumulus9.com to obtain these.
+C9_API_ENDPOINT = "xxxxxxxxxxxxxxxxxx"
+C9_API_SECRET = "sk-xxxxxxxxxxxxxxxxxx"
 
-# -----------------------------------------------------------------------------
-# REST API POST/GET Function
-# -----------------------------------------------------------------------------
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {C9_API_SECRET}",
+}
 
-
-def post(url, data):
-
-    # contact support@cumulus9.com to receive the below credentials
-    c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
-    c9_api_secret = "xxxxxxxxxxxxxxxxxx"
-
-    try:
-        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + c9_api_secret}
-        return requests.post(c9_api_endpoint + url, headers=headers, json=data)
-    except Exception as error:
-        raise ValueError("Cumulus9 API - " + str(error)) from error
+# Configure versions to compare
+NEW_VERSION = "2_7"
+OLD_VERSION = "2_6"
+HOLDING_PERIOD = 10
 
 
-def get(url):
-
-    # contact support@cumulus9.com to receive the below credentials
-    c9_api_endpoint = "xxxxxxxxxxxxxxxxxx"
-    c9_api_secret = "xxxxxxxxxxxxxxxxxx"
-
-    try:
-        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + c9_api_secret}
-        return get.get(c9_api_endpoint + url, headers=headers)
-    except Exception as error:
-        raise ValueError("Cumulus9 API - " + str(error)) from error
+def post_portfolio(payload: dict) -> dict:
+    """POST a portfolio payload and return the JSON response."""
+    response = requests.post(f"{C9_API_ENDPOINT}/portfolios", headers=HEADERS, json=payload)
+    response.raise_for_status()
+    return response.json()
 
 
-# -----------------------------------------------------------------------------
-# create portfolio payload
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Sample CRIF portfolio
+# ---------------------------------------------------------------------------
 
-portfolio_payload = {
+base_payload = {
     "calculation_type": "simm",
-    "use_closest_match": "true",
-    "execution_mode": "sync",
     "portfolio": [
         {
             "account_code": "Account ABC",
@@ -57,7 +41,7 @@ portfolio_payload = {
             "bucket": "1",
             "label1": "15Y",
             "label2": "OIS",
-            "amount_usd": 10000000,
+            "amount_usd": 10_000_000,
         },
         {
             "account_code": "Account ABC",
@@ -67,32 +51,27 @@ portfolio_payload = {
             "bucket": "1",
             "label1": "30Y",
             "label2": "OIS",
-            "amount_usd": -100000,
+            "amount_usd": -100_000,
         },
     ],
 }
 
-# -----------------------------------------------------------------------------
-# SEND PORTFOLIO_PAYLOAD TO API
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Calculate margin under each version
+# ---------------------------------------------------------------------------
 
-start_time = time.time()
+start = time.time()
 
-# calculate new_version margin
-portfolio_payload["simm_metrics"] = {"version": new_version, "holding_period": 10}
-response = post("/portfolios", portfolio_payload)
-new_version_margin = round(response.json()["data"][0]["initial_margin"])
+base_payload["simm_metrics"] = {"version": NEW_VERSION, "holding_period": HOLDING_PERIOD}
+new_margin = round(post_portfolio(base_payload)["data"][0]["initial_margin"])
 
-# calculate old_version margin
-portfolio_payload["simm_metrics"] = {"version": old_version, "holding_period": 10}
-response = post("/portfolios", portfolio_payload)
-old_version_margin = round(response.json()["data"][0]["initial_margin"])
+base_payload["simm_metrics"] = {"version": OLD_VERSION, "holding_period": HOLDING_PERIOD}
+old_margin = round(post_portfolio(base_payload)["data"][0]["initial_margin"])
 
-margin_impact = new_version_margin - old_version_margin
+impact = new_margin - old_margin
+elapsed = round(time.time() - start, 2)
 
-print(f"SIMM Margin v{new_version.replace('_', '.'):<{5}} | ${new_version_margin:,}")
-print(f"SIMM Margin v{old_version.replace('_', '.'):<{5}} | ${old_version_margin:,}")
-print(f"{'SIMM Margin Impact':<{8}} | ${margin_impact:,}")
-
-runtime = round(time.time() - start_time, 2)
-print(f"Completed in {runtime} seconds")
+print(f"SIMM v{NEW_VERSION.replace('_', '.'):<5}  ${new_margin:>15,}")
+print(f"SIMM v{OLD_VERSION.replace('_', '.'):<5}  ${old_margin:>15,}")
+print(f"{'Impact':<12}  ${impact:>15,}")
+print(f"\nCompleted in {elapsed}s")
