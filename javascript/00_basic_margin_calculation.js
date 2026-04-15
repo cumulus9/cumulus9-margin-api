@@ -1,6 +1,7 @@
 // Cumulus9 - All rights reserved.
+// Basic synchronous margin calculation for an ETD portfolio.
 
-'use-strict'
+'use strict'
 
 require('dotenv').config()
 const cumulus9 = require('./cumulus9.js')
@@ -8,7 +9,6 @@ const cumulus9 = require('./cumulus9.js')
 const payload = {
     vendor_symbology: 'clearing',
     calculation_type: 'margins',
-    execution_mode: 'sync',
     portfolio: [
         {
             account_code: 'Account 001',
@@ -18,6 +18,7 @@ const payload = {
             contract_expiry: 'DEC-25',
             contract_strike: '',
             net_position: '500',
+            account_type: 'H',
         },
         {
             account_code: 'Account 001',
@@ -27,6 +28,7 @@ const payload = {
             contract_expiry: 'DEC-25',
             contract_strike: '',
             net_position: '500',
+            account_type: 'H',
         },
         {
             account_code: 'Account 001',
@@ -36,6 +38,7 @@ const payload = {
             contract_expiry: '202512',
             contract_strike: '50.1',
             net_position: '-1000',
+            account_type: 'H',
         },
         {
             account_code: 'Account 002',
@@ -45,13 +48,20 @@ const payload = {
             contract_expiry: '202612',
             contract_strike: '',
             net_position: '-50',
+            account_type: 'H',
         },
     ],
 }
 
 cumulus9
-    .postPorfolio(payload)
-    .then((r) => {
-        console.log(JSON.stringify(r))
+    .postPortfolio(payload)
+    .then((results) => {
+        for (const account of results.data) {
+            console.log(`${account.account_code}: initial_margin = $${account.initial_margin.toLocaleString()}`)
+        }
+        console.log(JSON.stringify(results, null, 2))
     })
-    .catch((e) => console.log(e))
+    .catch((err) => {
+        console.error('Error:', err.message || err)
+        process.exit(1)
+    })

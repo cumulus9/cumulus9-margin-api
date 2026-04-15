@@ -21,6 +21,7 @@
 *test.py
 
 *.local*
+deploy.py
 
 # csharp generated files #
 bin/
