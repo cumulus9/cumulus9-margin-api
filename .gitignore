@@ -26,3 +26,9 @@ deploy.py
 # csharp generated files #
 bin/
 obj/
+
+# ai related docs
+AGENTS.md
+CLAUDE.md
+copilot-instructions.md
+.cursorrules
