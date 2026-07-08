@@ -738,6 +738,22 @@ components:
                 option_liquidation_value:
                     type: number
                     example: 0
+                delivery_margin:
+                    description: ICE Clear Europe delivery-margin component.
+                    type: number
+                    example: 0
+                cvm:
+                    description: Contingent variation margin component.
+                    type: number
+                    example: 0
+                sellers_security:
+                    description: Seller's security component.
+                    type: number
+                    example: 0
+                buyers_security:
+                    description: Buyer's security component.
+                    type: number
+                    example: 0
                 value_at_risk:
                     description: Portfolio VaR (when analytics requested).
                     type: number
@@ -748,7 +764,7 @@ components:
                     description: Dollar value of a basis point.
                     type: number
                 additional_margin:
-                    description: Add-on charges.
+                    description: Add-on charges, including delivery-period components where applicable.
                     type: number
                 pnl:
                     type: number
@@ -821,6 +837,12 @@ components:
                     items:
                         type: object
                         additionalProperties: true
+                margin_by_irm2_3_delivery:
+                    description: IRM 2.3 delivery-margin component breakdown by contract.
+                    type: array
+                    nullable: true
+                    items:
+                        $ref: '#/components/schemas/IrmDeliveryMarginByContract'
                 margin_by_dce:
                     type: array
                     nullable: true
@@ -898,6 +920,18 @@ components:
                 option_liquidation_value:
                     type: number
                     example: 0
+                delivery_margin:
+                    type: number
+                    example: 0
+                cvm:
+                    type: number
+                    example: 0
+                sellers_security:
+                    type: number
+                    example: 0
+                buyers_security:
+                    type: number
+                    example: 0
                 cross_model_offset:
                     type: number
 
@@ -935,6 +969,58 @@ components:
                     type: number
                     example: 1471104.47
                 option_liquidation_value:
+                    type: number
+                    example: 0
+                delivery_margin:
+                    type: number
+                    example: 0
+                cvm:
+                    type: number
+                    example: 0
+                sellers_security:
+                    type: number
+                    example: 0
+                buyers_security:
+                    type: number
+                    example: 0
+
+        IrmDeliveryMarginByContract:
+            type: object
+            properties:
+                result_type:
+                    type: string
+                    example: irm2_3
+                clearing_org:
+                    type: string
+                    example: ICE.EU
+                currency_code:
+                    type: string
+                    example: USD
+                exchange:
+                    type: string
+                    example: ICE.EU
+                contract_code:
+                    type: string
+                    example: B
+                contract_name:
+                    type: string
+                    example: Brent Crude Oil
+                sector:
+                    type: string
+                    example: Energy
+                sub_sector:
+                    type: string
+                    example: Oil
+                delivery_margin:
+                    type: number
+                    example: 0
+                cvm:
+                    type: number
+                    example: 0
+                sellers_security:
+                    type: number
+                    example: 0
+                buyers_security:
                     type: number
                     example: 0
 
