@@ -42,14 +42,14 @@ All parameters are set at the top level of the JSON request body alongside the `
 | ----------------------------- | --------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `portfolio`                   | `array`         | _required_            | Array of position objects (see [Position Types](#position-types))                                                                              |
 | `calculation_type`            | `string`        | `"all"`               | Calculation modes: `"margins"`, `"analytics"`, `"simm"`, `"all"`. Combine with commas, e.g. `"margins,analytics"`                              |
-| `vendor_symbology`            | `string`        | `"clearing"`          | Position symbology format: `"clearing"`, `"ion"`, `"gmi"`, `"tt_new"`                                                                          |
-| `cme_symbology`               | `string`        | `"clearing"`          | CME-specific symbology: `"clearing"` or `"globex"`                                                                                             |
+| `vendor_symbology`            | `string`        | `"clearing"`          | Position symbology format: `"clearing"`, `"globex"`, `"ion"`, `"gmi"`, `"tt_new"`. `"globex"` reads CME Group positions from their Globex codes and every other venue from clearing |
+| `cme_symbology`               | `string`        | `"clearing"`          | **Deprecated.** `"globex"` here does what `vendor_symbology: "globex"` does; send that instead. Still honoured |
 | `currency_code`               | `string`        | `"USD"`               | Base currency for aggregated results (ISO 4217). Supported: `USD`, `EUR`, `GBP`, `JPY`, `CHF`, `AUD`, `CAD`, `BRL`, `CNH`, `HKD`, `INR`, `NZD` |
 | `bdate`                       | `integer`       | previous business day | Calculation date in `YYYYMMDD` format                                                                                                          |
 | `price_date`                  | `integer`       | previous business day | Price date in `YYYYMMDD` format                                                                                                                |
 | `cycle_code`                  | `string`        | —                     | Exchange cycle code                                                                                                                            |
 | `use_closest_match`           | `boolean`       | `true`                | Auto-correct minor errors in expiry or strike by matching to the nearest valid contract                                                        |
-| `use_closest_active`          | `boolean`       | `true`                | Use the closest active contract when the exact match is not available                                                                          |
+| `use_closest_active`          | `boolean`       | `true`                | Restrict that substitution to expiries the venue is still quoting. Modifies `use_closest_match`; has no effect when it is `false` |
 | `pnl_details`                 | `boolean`       | `false`               | Cache the full historical P&L vector for downstream analysis                                                                                   |
 | `in_memory`                   | `boolean`       | `false`               | Process the request in-memory without persisting results                                                                                       |
 | `is_live`                     | `boolean`       | `true`                | Mark this as a live portfolio                                                                                                                  |
@@ -380,14 +380,20 @@ Each element in the `data` array contains:
 | `requirement`                  | `number`  | Net margin requirement                                            |
 | `gross_requirement`            | `number`  | Gross margin requirement                                          |
 | `option_liquidation_value`     | `number`  | Net option liquidation value                                      |
-| `delivery_margin`              | `number`  | ICE Clear Europe delivery-margin component                        |
-| `cvm`                          | `number`  | Contingent variation margin component                             |
-| `sellers_security`             | `number`  | Seller's security component                                       |
-| `buyers_security`              | `number`  | Buyer's security component                                        |
+| `delivery_margin`              | `number`  | ICE Clear Europe delivery-margin component in result currency      |
+| `cvm`                          | `number`  | Contingent variation margin component in result currency           |
+| `sellers_security`             | `number`  | Seller's security component in result currency                     |
+| `buyers_security`              | `number`  | Buyer's security component in result currency                      |
 | `value_at_risk`                | `number`  | Portfolio Value-at-Risk (when analytics requested)                |
+| `vm_at_risk`                   | `number`  | Worst expected variation-margin outflow over the MPOR at the configured confidence level (the P&L VaR) |
+| `im_at_risk`                   | `number?` | Worst expected initial-margin increase over the MPOR at the configured confidence level, under the environment's selected methodology |
+| `stress_im`                    | `number?` | The same figure under the worst move observed in the window rather than the confidence-level quantile; always at or above `im_at_risk` |
+| `im_at_risk_basis`             | `string?` | Methodology behind `im_at_risk`: `var_scaling`, `scan_elasticity`, `margin_history`, or `engine_replay_unavailable`; `null` when no figure is available |
+| `im_at_risk_breakdown`         | `array?`  | Per venue group and currency contribution to `im_at_risk` (`var_scaling` / `scan_elasticity` only) |
+| `im_at_risk_excluded`          | `array?`  | Margin carrying no scaling factor, and therefore excluded from `im_at_risk`, listed rather than dropped |
 | `stress_loss`                  | `number`  | Worst historical daily loss (when analytics requested)            |
 | `dv01`                         | `number`  | Dollar value of a basis point (when analytics requested)          |
-| `additional_margin`            | `number`  | Add-on charges, including delivery-period components              |
+| `additional_margin`            | `number`  | Add-on charges, including converted delivery-period components     |
 | `pnl`                          | `number`  | P&L                                                               |
 | `itd_volume`                   | `number`  | Intraday traded volume                                            |
 | `margin_by_ccp`                | `array`   | Margin breakdown by clearing house                                |
@@ -420,34 +426,39 @@ Each element in the `data` array contains:
 
 | Field                      | Type     | Description                                                |
 | -------------------------- | -------- | ---------------------------------------------------------- |
-| `clearing_org`             | `string` | Clearing house code (e.g. `"CME"`, `"ICE"`, `"EUREX_P"`)   |
+| `venue_group_code`         | `string` | Venue group the margin was charged for (e.g. `"CBOT"`, `"NYMEX"`, `"ICE.EU"`). Added 2026-07; rows are grouped at this granularity, so a CME Group portfolio reports separate `CBOT` / `CME` / `COMEX` / `NYMEX` rows where it previously reported one. Summed figures across rows are unchanged |
+| `clearing_org`             | `string` | Clearing house code (e.g. `"CME"`, `"ICE"`, `"EUREX_P"`). Unchanged in meaning and value |
 | `result_type`              | `string` | Margin model used (e.g. `"span"`, `"span2"`, `"eurexpme"`) |
 | `currency_code`            | `string` | Local currency of the clearing house                       |
-| `fxrate`                   | `number` | FX rate used to convert to the base currency               |
+| `fxrate`                   | `number\|null` | FX rate used for USD conversion. `null` means the rate is unavailable and this row contributes zero to converted aggregates |
 | `initial_margin`           | `number` | Margin requirement for this CCP                            |
 | `option_liquidation_value` | `number` | Option liquidation value at this CCP                       |
-| `delivery_margin`          | `number` | ICE Clear Europe delivery-margin component                 |
-| `cvm`                      | `number` | Contingent variation margin component                      |
-| `sellers_security`         | `number` | Seller's security component                                |
-| `buyers_security`          | `number` | Buyer's security component                                 |
+| `delivery_margin`          | `number` | ICE Clear Europe delivery-margin component in row currency  |
+| `cvm`                      | `number` | Contingent variation margin component in row currency       |
+| `sellers_security`         | `number` | Seller's security component in row currency                 |
+| `buyers_security`          | `number` | Buyer's security component in row currency                  |
 | `cross_model_offset`       | `number` | Cross-model offset credit, if applicable                   |
+
+`margin_by_contract` rows use the same nullable `fxrate` convention while
+retaining their native-currency margin figures.
 
 ### `margin_by_irm2_3_delivery` Element
 
-| Field               | Type     | Description                                |
-| ------------------- | -------- | ------------------------------------------ |
-| `result_type`       | `string` | Margin model, `"irm2_3"`                   |
-| `clearing_org`      | `string` | Clearing house, `"ICE.EU"`                 |
-| `currency_code`     | `string` | Local currency                             |
-| `exchange`          | `string` | Exchange code                              |
-| `contract_code`     | `string` | Contract code                              |
-| `contract_name`     | `string` | Contract description                       |
-| `sector`            | `string` | Sector                                     |
-| `sub_sector`        | `string` | Sub-sector                                 |
-| `delivery_margin`   | `number` | ICE Clear Europe delivery-margin component |
-| `cvm`               | `number` | Contingent variation margin component      |
-| `sellers_security`  | `number` | Seller's security component                |
-| `buyers_security`   | `number` | Buyer's security component                 |
+| Field                    | Type     | Description                                     |
+| ------------------------ | -------- | ----------------------------------------------- |
+| `result_type`            | `string` | Margin model, `"irm2_3"`                        |
+| `clearing_org`           | `string` | Clearing house, `"ICE.EU"`                      |
+| `currency_code`          | `string` | Engine/result currency                          |
+| `delivery_currency_code` | `string` | Raw component currency before conversion        |
+| `exchange`               | `string` | Exchange code                                   |
+| `contract_code`          | `string` | Contract code                                   |
+| `contract_name`          | `string` | Contract description                            |
+| `sector`                 | `string` | Sector                                          |
+| `sub_sector`             | `string` | Sub-sector                                      |
+| `delivery_margin`        | `number` | Raw ICE Clear Europe delivery-margin component  |
+| `cvm`                    | `number` | Raw contingent variation margin component       |
+| `sellers_security`       | `number` | Raw seller's security component                 |
+| `buyers_security`        | `number` | Raw buyer's security component                  |
 
 ### `margin_by_span` Element
 
