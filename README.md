@@ -420,7 +420,7 @@ Each element in the `data` array contains:
 
 | Field                      | Type     | Description                                                |
 | -------------------------- | -------- | ---------------------------------------------------------- |
-| `clearing_org`             | `string` | Clearing house code (e.g. `"CME"`, `"ICE"`, `"EUREX_P"`)   |
+| `clearing_org`             | `string` | Clearing house code (e.g. `"CME"`, `"ICE"`, `"EUREX"`). Equal to the venue group unless the clearing house is a separate entity from the venue (`"LCH"` clears `FMX`, `"ECC"` clears `EEX`, `"FICC"` has no listing venue) |
 | `result_type`              | `string` | Margin model used (e.g. `"span"`, `"span2"`, `"eurexpme"`) |
 | `currency_code`            | `string` | Local currency of the clearing house                       |
 | `fxrate`                   | `number` | FX rate used to convert to the base currency               |
