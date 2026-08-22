@@ -427,7 +427,7 @@ Each element in the `data` array contains:
 | Field                      | Type     | Description                                                |
 | -------------------------- | -------- | ---------------------------------------------------------- |
 | `venue_group_code`         | `string` | Venue group the margin was charged for (e.g. `"CBOT"`, `"NYMEX"`, `"ICE.EU"`). Added 2026-07; rows are grouped at this granularity, so a CME Group portfolio reports separate `CBOT` / `CME` / `COMEX` / `NYMEX` rows where it previously reported one. Summed figures across rows are unchanged |
-| `clearing_org`             | `string` | Clearing house code (e.g. `"CME"`, `"ICE"`, `"EUREX_P"`). Unchanged in meaning and value |
+| `clearing_org`             | `string` | Clearing house code (e.g. `"CME"`, `"ICE"`, `"EUREX"`). Equal to `venue_group_code` unless the clearing house is a separate entity from the venue (`"LCH"` clears `FMX`, `"ECC"` clears `EEX`, `"FICC"` has no listing venue) |
 | `result_type`              | `string` | Margin model used (e.g. `"span"`, `"span2"`, `"eurexpme"`) |
 | `currency_code`            | `string` | Local currency of the clearing house                       |
 | `fxrate`                   | `number\|null` | FX rate used for USD conversion. `null` means the rate is unavailable and this row contributes zero to converted aggregates |
