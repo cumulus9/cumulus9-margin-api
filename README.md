@@ -26,6 +26,8 @@ API keys use the `sk-...` prefix format. To obtain credentials (`C9_API_ENDPOINT
 | `POST` | `/portfolios`                   | Submit a portfolio and receive margin results synchronously |
 | `POST` | `/portfolios/batch`             | Submit a large portfolio for background processing          |
 | `GET`  | `/portfolios/batch/:batch_id`   | Poll batch job status and progress                          |
+| `POST` | `/portfolios/stage`             | Stage a portfolio for comparison without calculating it     |
+| `POST` | `/portfolios/stage/submit`      | Calculate a staged portfolio, or diff it against a prior submission |
 | `GET`  | `/healthcheck/analytics-engine` | Check engine status and available margin parameters         |
 
 ---
@@ -479,6 +481,78 @@ retaining their native-currency margin figures.
 | `intercontract_credit`     | `number` | Inter-commodity spread credit   |
 | `strategy_spread_charge`   | `number` | Strategy spread charge          |
 | `option_liquidation_value` | `number` | Option liquidation value        |
+
+---
+
+## What-If Analysis
+
+Compare a modified portfolio against one you have already submitted, without
+disturbing the original. Stage the changed portfolio, then submit it naming the
+earlier `request_id` as the baseline.
+
+### POST `/portfolios/stage/submit`
+
+```json
+{
+    "action": "what-if",
+    "request_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "portfolio_id": "PF-1"
+}
+```
+
+| Field          | Type     | Description                                                              |
+| -------------- | -------- | ------------------------------------------------------------------------ |
+| `action`       | `string` | `"what-if"`. Anything else calculates the staged portfolio normally      |
+| `request_id`   | `string` | The earlier submission to compare against — the "before" side            |
+| `portfolio_id` | `string` | Which portfolio of that submission to compare                            |
+
+The staged portfolio is calculated synchronously and diffed against the stored
+results of `request_id`. Throughout the response, `_1` is the baseline and `_2`
+is the staged portfolio.
+
+```json
+{
+    "what_if": {
+        "summary": {
+            "currency_code": "USD",
+            "gross_requirement_1": 1250000, "gross_requirement_2": 1310000,
+            "gross_margin_1": 1400000,      "gross_margin_2": 1465000,
+            "option_liquidation_value_1": 150000, "option_liquidation_value_2": 155000,
+            "additional_margin_1": 20000,   "additional_margin_2": 22000,
+            "value_at_risk_1": 310000,      "value_at_risk_2": 330000,
+            "dv01_1": 4200,                 "dv01_2": 4550
+        },
+        "margin_by_contract": [
+            {
+                "clearing_org": "CME", "result_type": "span", "exchange": "CBOT",
+                "cc_code": "ZC", "cc_name": "Corn", "sector": "Agriculture",
+                "sub_sector": "Grains", "currency_code": "USD",
+                "im_usd_1": 210000, "im_usd_2": 245000,
+                "olv_usd_1": 0, "olv_usd_2": 0
+            }
+        ],
+        "portfolio": []
+    }
+}
+```
+
+`summary` is the portfolio-level before/after pair. `margin_by_contract` is keyed
+on clearing organisation, exchange and contract code, **converted to USD** so the
+two sides are comparable, and carries a row for every contract on either side — a
+contract only in the baseline reports `im_usd_2: 0`, and one only in the staged
+portfolio reports `im_usd_1: 0`, so positions opened and closed both show up.
+`portfolio` is the same comparison at position level.
+
+**Authorisation.** You may run a what-if against any portfolio you are entitled
+to see, including one submitted by another user whose results you have access
+to. The baseline's owner is resolved server-side from the `request_id`; it is
+never read from the request body. Callers restricted to specific account codes
+may only compare portfolios within those codes.
+
+| Status | Meaning                                                                        |
+| ------ | ------------------------------------------------------------------------------ |
+| `403`  | You are not authorised to run a what-if on that portfolio                      |
+| `409`  | The baseline results have aged out of storage — re-submit the portfolio first   |
 
 ---
 
