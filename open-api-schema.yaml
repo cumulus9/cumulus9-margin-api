@@ -739,24 +739,101 @@ components:
                     type: number
                     example: 0
                 delivery_margin:
-                    description: ICE Clear Europe delivery-margin component.
+                    description: ICE Clear Europe delivery-margin component in result currency.
                     type: number
                     example: 0
                 cvm:
-                    description: Contingent variation margin component.
+                    description: Contingent variation margin component in result currency.
                     type: number
                     example: 0
                 sellers_security:
-                    description: Seller's security component.
+                    description: Seller's security component in result currency.
                     type: number
                     example: 0
                 buyers_security:
-                    description: Buyer's security component.
+                    description: Buyer's security component in result currency.
                     type: number
                     example: 0
                 value_at_risk:
                     description: Portfolio VaR (when analytics requested).
                     type: number
+                vm_at_risk:
+                    description: >-
+                        Worst expected variation-margin outflow over the margin period of risk at the
+                        configured confidence level (the portfolio P&L VaR), in result currency.
+                    type: number
+                im_at_risk:
+                    description: >-
+                        Worst expected initial-margin increase over the margin period of risk at the
+                        configured confidence level, in result currency, under the methodology selected
+                        for the environment. var_scaling (default) and scan_elasticity scale each
+                        venue group's margin by a factor derived from that venue's own risk history,
+                        holding today's positions fixed; margin_history takes the quantile of the
+                        portfolio's own recorded day-over-day margin growth. Null when nothing could
+                        be estimated.
+                    type: number
+                    nullable: true
+                stress_im:
+                    description: >-
+                        The same figure measured under the worst move observed in the window rather
+                        than the confidence-level quantile. Always at or above im_at_risk. Null
+                        whenever im_at_risk is null, and for the margin_history methodology, which
+                        reports no separate worst case.
+                    type: number
+                    nullable: true
+                im_at_risk_basis:
+                    description: >-
+                        Which methodology produced im_at_risk. "engine_replay_unavailable" means the
+                        environment selected engine_replay, which is defined but not implemented, and
+                        is reported distinctly so it is not mistaken for a methodology that ran and
+                        found nothing. Null when im_at_risk is null.
+                    type: string
+                    nullable: true
+                    enum: [var_scaling, scan_elasticity, margin_history, engine_replay_unavailable, null]
+                im_at_risk_breakdown:
+                    description: >-
+                        Per venue group and currency contribution to im_at_risk. Present only for the
+                        var_scaling and scan_elasticity methodologies.
+                    type: array
+                    nullable: true
+                    items:
+                        type: object
+                        properties:
+                            venue_group_code:
+                                type: string
+                            currency_code:
+                                type: string
+                            margin:
+                                description: Initial margin charged at this venue, in its own currency.
+                                type: number
+                            im_at_risk:
+                                description: Dimensionless scaling factor applied to that margin.
+                                type: number
+                            im_at_risk_amount:
+                                description: margin x im_at_risk, in the venue's own currency.
+                                type: number
+                            stress_im:
+                                type: number
+                            stress_im_amount:
+                                type: number
+                im_at_risk_excluded:
+                    description: >-
+                        Margin that carries no scaling factor and is therefore NOT included in
+                        im_at_risk, listed rather than dropped so the gap is visible. Typically fixed
+                        income, FX or any venue with too little history to estimate a factor.
+                    type: array
+                    nullable: true
+                    items:
+                        type: object
+                        properties:
+                            venue_group_code:
+                                type: string
+                            currency_code:
+                                type: string
+                            margin:
+                                type: number
+                            reason:
+                                type: string
                 stress_loss:
                     description: Worst historical daily loss (when analytics requested).
                     type: number
@@ -764,7 +841,7 @@ components:
                     description: Dollar value of a basis point.
                     type: number
                 additional_margin:
-                    description: Add-on charges, including delivery-period components where applicable.
+                    description: Add-on charges, including converted delivery-period components where applicable.
                     type: number
                 pnl:
                     type: number
@@ -902,6 +979,12 @@ components:
         MarginByCCP:
             type: object
             properties:
+                venue_group_code:
+                    description: >-
+                        Venue group the margin was charged for (e.g. "CBOT", "NYMEX", "ICE.EU").
+                        Sits alongside clearing_org, which is unchanged: one clearing house covers
+                        several venue groups.
+                    type: string
                 clearing_org:
                     type: string
                     example: CME
@@ -912,7 +995,11 @@ components:
                     type: string
                     example: USD
                 fxrate:
+                    description: >-
+                        FX rate used for USD conversion. Null means the rate is unavailable and
+                        this row contributes zero to converted aggregates.
                     type: number
+                    nullable: true
                     example: 1.0
                 initial_margin:
                     type: number
@@ -921,15 +1008,19 @@ components:
                     type: number
                     example: 0
                 delivery_margin:
+                    description: ICE Clear Europe delivery-margin component in row currency.
                     type: number
                     example: 0
                 cvm:
+                    description: Contingent variation margin component in row currency.
                     type: number
                     example: 0
                 sellers_security:
+                    description: Seller's security component in row currency.
                     type: number
                     example: 0
                 buyers_security:
+                    description: Buyer's security component in row currency.
                     type: number
                     example: 0
                 cross_model_offset:
@@ -938,6 +1029,12 @@ components:
         MarginByContract:
             type: object
             properties:
+                venue_group_code:
+                    description: >-
+                        Venue group the margin was charged for (e.g. "CBOT", "NYMEX", "ICE.EU").
+                        Sits alongside clearing_org, which is unchanged: one clearing house covers
+                        several venue groups.
+                    type: string
                 clearing_org:
                     type: string
                     example: CME
@@ -963,7 +1060,11 @@ components:
                     type: string
                     example: USD
                 fxrate:
+                    description: >-
+                        FX rate used for USD conversion. Null means the rate is unavailable and
+                        this row contributes zero to converted aggregates.
                     type: number
+                    nullable: true
                     example: 1.0
                 initial_margin:
                     type: number
@@ -972,15 +1073,19 @@ components:
                     type: number
                     example: 0
                 delivery_margin:
+                    description: ICE Clear Europe delivery-margin component in row currency.
                     type: number
                     example: 0
                 cvm:
+                    description: Contingent variation margin component in row currency.
                     type: number
                     example: 0
                 sellers_security:
+                    description: Seller's security component in row currency.
                     type: number
                     example: 0
                 buyers_security:
+                    description: Buyer's security component in row currency.
                     type: number
                     example: 0
 
@@ -994,8 +1099,13 @@ components:
                     type: string
                     example: ICE.EU
                 currency_code:
+                    description: Engine/result currency.
                     type: string
                     example: USD
+                delivery_currency_code:
+                    description: Raw component currency before conversion.
+                    type: string
+                    example: EUR
                 exchange:
                     type: string
                     example: ICE.EU
@@ -1012,15 +1122,19 @@ components:
                     type: string
                     example: Oil
                 delivery_margin:
+                    description: Raw ICE Clear Europe delivery-margin component.
                     type: number
                     example: 0
                 cvm:
+                    description: Raw contingent variation margin component.
                     type: number
                     example: 0
                 sellers_security:
+                    description: Raw seller's security component.
                     type: number
                     example: 0
                 buyers_security:
+                    description: Raw buyer's security component.
                     type: number
                     example: 0
 
