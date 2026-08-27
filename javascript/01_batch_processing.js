@@ -41,8 +41,9 @@ async function main() {
     console.log(`Batch submitted: ${batch_id}`)
 
     // Step 2: Poll for completion
+    let status
     while (true) {
-        const status = await cumulus9.getBatchStatus(batch_id)
+        status = await cumulus9.getBatchStatus(batch_id)
         console.log(`  [${status.status}] ${status.completed_pct.toFixed(1)}% complete (${status.runtime_ms}ms elapsed)`)
 
         if (['completed', 'failed', 'completed_with_errors'].includes(status.status)) {
@@ -52,6 +53,30 @@ async function main() {
 
         await new Promise((resolve) => setTimeout(resolve, 5000))
     }
+
+    if (status.status === 'failed') return
+
+    // Step 3: Fetch results
+    // One call for the whole batch, paged for a large book.
+    const accounts = []
+    let offset = 0
+    for (;;) {
+        const page = await cumulus9.getBatchResults(batch_id, 5000, offset)
+        accounts.push(...page.results)
+        offset += page.results.length
+        if (page.results.length === 0 || offset >= page.total) break
+    }
+
+    console.log(`\nFetched ${accounts.length} account results`)
+
+    const totalIm = accounts.reduce((sum, a) => sum + (a.initial_margin || 0), 0)
+    console.log(`Total initial margin across batch: ${totalIm.toLocaleString()}`)
+
+    // Step 4: Drill down into one account. The call above returns totals; this
+    // returns the full calculation detail for a single account.
+    const first = accounts[0]
+    const detail = await cumulus9.getResults(first.request_id, first.portfolio_id)
+    console.log(`\n${first.account_code}: ${(detail[0].portfolio || []).length} positions`)
 }
 
 main().catch((err) => {
