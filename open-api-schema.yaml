@@ -12,7 +12,8 @@ info:
         ## Getting Started
         1. Obtain `C9_API_ENDPOINT` and `C9_API_SECRET` from support@cumulus9.com.
         2. POST a portfolio payload to `/portfolios` for synchronous results.
-        3. For large workloads, POST to `/portfolios/batch` and poll status.
+        3. For large workloads, POST to `/portfolios/batch`, poll status, then read each
+           `request_id` the finished batch reports back through `/results`.
     contact:
         email: support@cumulus9.com
         url: https://cumulus9.com
@@ -23,6 +24,8 @@ tags:
       description: Submit portfolios and calculate margin requirements
     - name: batch
       description: Batch processing for large portfolios
+    - name: results
+      description: Read back the results of a completed calculation
     - name: healthcheck
       description: Check engine status and available margin parameters
 servers:
@@ -178,6 +181,101 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/BatchStatus'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+
+    /portfolios/batch/{batch_id}/results:
+        get:
+            summary: Fetch a whole batch's results
+            description: |
+                Every account the batch calculated, in one call, with its account-level
+                figures.
+
+                A batch is split into chunks whose sizes are chosen from engine response
+                sizes and worker memory, so the same portfolio may be three chunks today
+                and forty tomorrow. This endpoint answers at the level the caller
+                submitted. For the full calculation detail of a single account, follow up
+                with `GET /results`.
+            operationId: getBatchResults
+            tags:
+                - batch
+            parameters:
+                - name: batch_id
+                  in: path
+                  required: true
+                  description: The `batch_id` returned from `POST /portfolios/batch`.
+                  schema:
+                      type: string
+                      format: uuid
+                - name: limit
+                  in: query
+                  required: false
+                  description: Maximum accounts to return. Capped at 20000.
+                  schema:
+                      type: integer
+                      default: 5000
+                      maximum: 20000
+                - name: offset
+                  in: query
+                  required: false
+                  description: Accounts to skip, for paging through a large book.
+                  schema:
+                      type: integer
+                      default: 0
+            responses:
+                '200':
+                    description: The batch's account results
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BatchResults'
+                '400':
+                    description: limit or offset was not a number
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+
+    /results:
+        get:
+            summary: Fetch stored calculation results
+            description: |
+                Return the stored results of a completed calculation.
+
+                `POST /portfolios/batch` splits a portfolio into chunks and calculates each
+                under its own `request_id`; the finished batch status lists them in
+                `request_ids`. Call this endpoint once per id to collect the whole batch.
+            operationId: getResults
+            tags:
+                - results
+            parameters:
+                - name: request_id
+                  in: query
+                  required: true
+                  description: A `request_id` reported by `GET /portfolios/batch/{batch_id}`.
+                  schema:
+                      type: string
+                      format: uuid
+                - name: portfolio_id
+                  in: query
+                  required: false
+                  description: >-
+                      Restrict the response to one account: `md5(account_code)`, or
+                      `md5(account_code + sub_account_code)` for a sub-account. Omit to get
+                      every account calculated under this `request_id`.
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: Account results. Empty when the caller does not own the request.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/AccountResult'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
                 '500':
@@ -1287,6 +1385,105 @@ components:
                 completed_pct:
                     description: Completion percentage (0-100).
                     type: number
+                request_ids:
+                    description: >-
+                        The IDs this batch's results are stored under, one per chunk.
+                        Present only once status is terminal (completed,
+                        completed_with_errors or failed). Needed only for the
+                        `GET /results` drill-down; for the batch's account figures use
+                        `GET /portfolios/batch/{batch_id}/results`.
+                    type: array
+                    items:
+                        type: string
+                        format: uuid
+
+        BatchResults:
+            description: Account-level results for one batch.
+            type: object
+            properties:
+                batch_id:
+                    type: string
+                    format: uuid
+                status:
+                    description: The batch's status, as reported by the poll endpoint.
+                    type: string
+                total:
+                    description: >-
+                        Accounts in the whole batch, before limit and offset. Page until
+                        offset plus the length of `results` reaches this.
+                    type: integer
+                    example: 1284
+                limit:
+                    type: integer
+                offset:
+                    type: integer
+                results:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BatchResultRow'
+
+        BatchResultRow:
+            description: One account's figures from a batch.
+            type: object
+            properties:
+                account_code:
+                    type: string
+                    example: 'Account 001'
+                portfolio_id:
+                    description: 'md5(account_code), or md5(account_code + sub_account_code).'
+                    type: string
+                    example: '12a09fb7c8e61a6a7201938225ce71e9'
+                request_id:
+                    description: Pass to `GET /results` with portfolio_id for this account's drill-down.
+                    type: string
+                    format: uuid
+                submitted_time:
+                    type: string
+                    format: date-time
+                status:
+                    description: >-
+                        Calculation state of the account: live, static, warning, failed or
+                        loading. Null on a row read from the durable record.
+                    type: string
+                    nullable: true
+                source:
+                    description: >-
+                        `live` means the account still carries this batch's calculation and
+                        every field below is populated. `history` means a later calculation
+                        has replaced its current figures, so requirement, gross_margin and
+                        gross_requirement come back null rather than as a misleading zero.
+                    type: string
+                    enum: [live, history]
+                initial_margin:
+                    type: number
+                    nullable: true
+                requirement:
+                    type: number
+                    nullable: true
+                gross_margin:
+                    type: number
+                    nullable: true
+                gross_requirement:
+                    type: number
+                    nullable: true
+                option_liquidation_value:
+                    type: number
+                    nullable: true
+                additional_margin:
+                    type: number
+                    nullable: true
+                value_at_risk:
+                    type: number
+                    nullable: true
+                stress_loss:
+                    type: number
+                    nullable: true
+                exceptions:
+                    type: number
+                    nullable: true
+                closest_matches:
+                    type: number
+                    nullable: true
 
         HealthcheckEntry:
             type: object

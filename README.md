@@ -26,6 +26,9 @@ API keys use the `sk-...` prefix format. To obtain credentials (`C9_API_ENDPOINT
 | `POST` | `/portfolios`                   | Submit a portfolio and receive margin results synchronously |
 | `POST` | `/portfolios/batch`             | Submit a large portfolio for background processing          |
 | `GET`  | `/portfolios/batch/:batch_id`   | Poll batch job status and progress                          |
+| `GET`  | `/portfolios/batch/:batch_id/results` | Every account the batch calculated, in one call       |
+| `GET`  | `/results`                      | Full drill-down for one calculation                         |
+| `GET`  | `/results/accounts`             | Latest results for every live account, whatever produced them |
 | `POST` | `/portfolios/stage`             | Stage a portfolio for comparison without calculating it     |
 | `POST` | `/portfolios/stage/submit`      | Calculate a staged portfolio, or diff it against a prior submission |
 | `GET`  | `/healthcheck/analytics-engine` | Check engine status and available margin parameters         |
@@ -108,7 +111,25 @@ Used when `calculation_type` includes `"analytics"`. Defines stress scenarios ap
 
 ## Batch Processing
 
-For large portfolios or high-volume workloads, use the batch endpoint. It accepts the same payload as `POST /portfolios` and processes it asynchronously in the background with automatic chunking and progress tracking.
+For large portfolios or high-volume workloads, use the batch endpoint. It accepts the same payload as `POST /portfolios` and processes it in the background instead of holding a request open for the length of the calculation.
+
+The flow is four steps:
+
+1. `POST /portfolios/batch` -- returns `202` with a `batch_id`
+2. `GET /portfolios/batch/:batch_id` -- poll until `status` is terminal
+3. `GET /portfolios/batch/:batch_id/results` -- every account the batch calculated
+4. `GET /results` -- optional, the full drill-down for one account
+
+### How it works
+
+`POST /portfolios/batch` does not calculate anything. It stores your payload, queues a job and answers `202` immediately, which is why the response carries a `batch_id` and nothing else.
+
+A worker then picks the job up and splits the portfolio into chunks by account. Chunk sizes are not fixed: the platform divides available worker memory by the response sizes each margin engine has actually been producing, so the same portfolio may be three chunks on one run and forty on the next. Each chunk is calculated independently and stored under its own internal `request_id`.
+
+Two consequences matter to a caller:
+
+- **Chunking is invisible, and you should keep it that way.** `GET /portfolios/batch/:batch_id/results` answers at the level you submitted, so you never need to know how the portfolio was divided.
+- **A `request_id` sent in the payload is not used.** `POST /portfolios` honours one; `POST /portfolios/batch` assigns its own to each chunk. Track your submission by `batch_id`.
 
 ### POST `/portfolios/batch`
 
@@ -141,12 +162,12 @@ Poll the status of a batch job.
 ```json
 {
     "batch_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "status": "processing",
-    "queue_position": 0,
+    "status": "completed",
     "created_at": "2025-01-03T09:31:14Z",
-    "completed_at": null,
-    "runtime_ms": 4523,
-    "completed_pct": 67.5
+    "completed_at": "2025-01-03T09:33:02Z",
+    "runtime_ms": 108431,
+    "completed_pct": 100,
+    "request_ids": ["1f0a...", "6c42...", "b7d9..."]
 }
 ```
 
@@ -159,6 +180,80 @@ Poll the status of a batch job.
 | `completed_at`   | `string`  | ISO 8601 completion timestamp (`null` while in progress)                            |
 | `runtime_ms`     | `integer` | Elapsed time in milliseconds                                                        |
 | `completed_pct`  | `number`  | Completion percentage (0--100)                                                      |
+| `request_ids`    | `string[]`| The IDs the batch's results are stored under, one per chunk. Present only once `status` is terminal. Needed only for the drill-down described below |
+
+### GET `/portfolios/batch/:batch_id/results`
+
+Every account the batch calculated, in one call.
+
+`POST /portfolios/batch` splits a portfolio into chunks and calculates each independently. Chunk sizes are chosen from engine response sizes and worker memory, so the same portfolio may be three chunks today and forty tomorrow. This endpoint answers at the level you submitted -- the batch -- and returns the account-level figures for all of it.
+
+| Parameter | Type      | Default | Description                                        |
+| --------- | --------- | ------- | ---------------------------------------------------- |
+| `limit`   | `integer` | `5000`  | Maximum accounts to return. Capped at 20,000       |
+| `offset`  | `integer` | `0`     | Accounts to skip, for paging through a large book  |
+
+**Response**:
+
+```json
+{
+    "batch_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "status": "completed",
+    "total": 1284,
+    "limit": 5000,
+    "offset": 0,
+    "results": [
+        {
+            "account_code": "Account 001",
+            "portfolio_id": "12a09fb7c8e61a6a7201938225ce71e9",
+            "request_id": "af59a90f-f294-4080-8a36-1d16358ca8d3",
+            "submitted_time": "2025-01-03T09:33:01Z",
+            "status": "live",
+            "source": "live",
+            "initial_margin": 225110.06,
+            "requirement": 225110.06,
+            "gross_margin": 225110.06,
+            "gross_requirement": 225110.06,
+            "option_liquidation_value": 0,
+            "additional_margin": 0,
+            "value_at_risk": 0,
+            "stress_loss": 0,
+            "exceptions": 0,
+            "closest_matches": 0
+        }
+    ]
+}
+```
+
+`total` is the account count for the whole batch, before `limit` and `offset` are applied. Page until `offset + len(results)` reaches it.
+
+`source` says where a row's figures came from, and it matters:
+
+| `source`    | Meaning                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `"live"`    | The account still carries this batch's calculation, so every field above is populated                                                                      |
+| `"history"` | A later calculation has replaced the account's current figures. The durable record keeps `initial_margin`, `option_liquidation_value`, `additional_margin`, `value_at_risk`, `stress_loss`, `exceptions` and `closest_matches`; `requirement`, `gross_margin` and `gross_requirement` come back `null` rather than as a zero you would read as a real number |
+
+In practice a batch fetched after it finishes is entirely `live`. Rows turn `history` when you re-read an older batch whose accounts have since been recalculated.
+
+### Drill-down: `GET /results`
+
+The endpoint above returns account totals. For the full calculation detail of one account -- the per-engine breakdowns, the priced positions, the exceptions -- use `GET /results`:
+
+| Parameter      | Type     | Required | Description                                                                          |
+| -------------- | -------- | -------- | ------------------------------------------------------------------------------------ |
+| `request_id`   | `string` | yes      | The `request_id` on the account's row above, or any id from the status response's `request_ids` |
+| `portfolio_id` | `string` | --       | One account: the `portfolio_id` on its row above, which is `md5(account_code)` (`md5(account_code + sub_account_code)` for a sub-account). Omit to get every account calculated under that `request_id` |
+
+The response is the same per-account result object `POST /portfolios` returns synchronously.
+
+Pass `portfolio_id` whenever you want a single account. Omitting it returns the whole chunk, which for a large book can be tens of megabytes.
+
+A `request_id` supplied in the request body is honoured by `POST /portfolios` but not by `POST /portfolios/batch`, which assigns its own to each chunk.
+
+### Reading a book rather than a batch
+
+`GET /results/accounts` returns one row per live account you own, with the same headline figures, reflecting each account's most recent calculation whatever batch produced it. Use it to read current state; use the batch endpoint to read the output of one submission.
 
 ---
 
@@ -697,6 +792,25 @@ while True:
     if status["status"] in ("completed", "failed", "completed_with_errors"):
         break
     time.sleep(5)
+
+# Fetch every account the batch calculated, in one call
+results = requests.get(
+    f"{C9_API_ENDPOINT}/portfolios/batch/{batch_id}/results",
+    headers=HEADERS
+).json()
+
+for account in results["results"]:
+    print(f"{account['account_code']}: ${account['initial_margin']:,.2f}")
+
+# Full drill-down for one account
+detail = requests.get(
+    f"{C9_API_ENDPOINT}/results",
+    headers=HEADERS,
+    params={
+        "request_id": results["results"][0]["request_id"],
+        "portfolio_id": results["results"][0]["portfolio_id"],
+    }
+).json()
 ```
 
 ### cURL

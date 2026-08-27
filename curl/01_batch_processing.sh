@@ -76,3 +76,33 @@ while true; do
 
     sleep 5
 done
+
+[[ "$STATUS" == "failed" ]] && exit 1
+
+# ---------------------------------------------------------------------------
+# Step 3: Fetch results
+# ---------------------------------------------------------------------------
+# One call for every account the batch calculated. Add ?limit=&offset= to page
+# through a large book; `total` in the response is the full account count.
+
+echo ""
+RESULTS=$(curl -s "${C9_API_ENDPOINT}/portfolios/batch/${BATCH_ID}/results" \
+  -H "Authorization: Bearer ${C9_API_SECRET}")
+
+echo "$RESULTS" | jq -r '"Accounts: \(.total)"'
+echo "$RESULTS" | jq -r '.results[] | "  \(.account_code): \(.initial_margin)"'
+
+# ---------------------------------------------------------------------------
+# Step 4: Drill down into one account
+# ---------------------------------------------------------------------------
+# The call above returns account totals. GET /results returns the full
+# calculation detail. Always pass portfolio_id: without it you get every account
+# in that chunk, which for a large book can be tens of megabytes.
+
+REQUEST_ID=$(echo "$RESULTS" | jq -r '.results[0].request_id')
+PORTFOLIO_ID=$(echo "$RESULTS" | jq -r '.results[0].portfolio_id')
+
+echo ""
+curl -s "${C9_API_ENDPOINT}/results?request_id=${REQUEST_ID}&portfolio_id=${PORTFOLIO_ID}" \
+  -H "Authorization: Bearer ${C9_API_SECRET}" \
+  | jq -r '.[] | "\(.account_code): \(.portfolio | length) positions, IM \(.initial_margin)"'
