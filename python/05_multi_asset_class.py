@@ -37,6 +37,8 @@ payload = {
         "method": "value-at-risk",
         "mpor": 1,
         "mode": "absolute",
+        # "delta" (default) or "historical-revaluation": see the risk_metrics table
+        "option_pnl_method": "delta",
     },
     "simm_metrics": {
         "version": "2_6_5",

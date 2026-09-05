@@ -81,6 +81,7 @@ Used when `calculation_type` includes `"analytics"`.
 | `method`                          | `string`  | `"value-at-risk"` | Risk method: `"value-at-risk"` or `"expected-shortfall"`          |
 | `mpor`                            | `integer` | `1`               | Margin period of risk in days                                     |
 | `mode`                            | `string`  | `"absolute"`      | Returns mode: `"absolute"` or `"relative"`                        |
+| `option_pnl_method`               | `string`  | `"delta"`         | How a vanilla option's historical P&L is built: `"delta"` scales each historical move of the underlying by today's delta; `"historical-revaluation"` reprices today's option under each date's historical underlying and implied-volatility move, so gamma and vega count. Options without a usable volatility history keep the delta approximation and are listed in the response's `option_pnl_provenance` |
 | `bond_pricing_version`            | `integer` | `1`               | Bond pricing model version                                        |
 | `bond_use_continuous_compounding` | `boolean` | `true`            | `true` for continuous compounding, `false` for annual compounding |
 
@@ -489,6 +490,7 @@ Each element in the `data` array contains:
 | `im_at_risk_breakdown`         | `array?`  | Per venue group and currency contribution to `im_at_risk` (`var_scaling` / `scan_elasticity` only) |
 | `im_at_risk_excluded`          | `array?`  | Margin carrying no scaling factor, and therefore excluded from `im_at_risk`, listed rather than dropped |
 | `stress_loss`                  | `number`  | Worst historical daily loss (when analytics requested)            |
+| `option_pnl_provenance`        | `object?` | How each vanilla option's historical P&L was built under `risk_metrics.option_pnl_method`: `requested_method`, `historical_positions`, `direct_positions` (own volatility history), `proxy_positions` (a curated proxy's history, listed in `proxy_contracts`), `delta_fallback_positions` and `fallbacks` (`position_id`, `contract_id`, `reason` in `missing_volatility_history`, `insufficient_volatility_history`, `invalid_revaluation_input`). A fallback is a priced position, not an error. Absent on results calculated before the field existed |
 | `dv01`                         | `number`  | Dollar value of a basis point (when analytics requested)          |
 | `additional_margin`            | `number`  | Add-on charges, including converted delivery-period components     |
 | `pnl`                          | `number`  | P&L                                                               |
@@ -863,7 +865,8 @@ A multi-account, multi-asset-class request combining ETD, Fixed Income, FX, and 
         "ci": 99,
         "method": "value-at-risk",
         "mpor": 1,
-        "mode": "absolute"
+        "mode": "absolute",
+        "option_pnl_method": "delta"
     },
     "simm_metrics": {
         "version": "2_6_5",

@@ -449,6 +449,18 @@ components:
                     enum: [absolute, relative]
                     default: absolute
                     example: absolute
+                option_pnl_method:
+                    description: >-
+                        How a vanilla option's historical P&L is built. `delta` scales each
+                        historical move of the underlying by today's delta. `historical-revaluation`
+                        reprices today's option under each date's historical underlying and
+                        implied-volatility move, so gamma and vega count; an option without a usable
+                        volatility history keeps the delta approximation and is listed in the
+                        response's `option_pnl_provenance`.
+                    type: string
+                    enum: [delta, historical-revaluation]
+                    default: delta
+                    example: delta
                 bond_pricing_version:
                     description: Bond pricing model version.
                     type: integer
@@ -854,6 +866,49 @@ components:
                 value_at_risk:
                     description: Portfolio VaR (when analytics requested).
                     type: number
+                option_pnl_provenance:
+                    description: >-
+                        How each vanilla option's historical P&L was built under
+                        risk_metrics.option_pnl_method. A delta fallback is a priced position, not an
+                        error. Absent on results calculated before the field existed.
+                    type: object
+                    nullable: true
+                    properties:
+                        requested_method:
+                            type: string
+                            enum: [delta, historical-revaluation]
+                        historical_positions:
+                            description: Options repriced from a volatility history, own or proxied.
+                            type: integer
+                        direct_positions:
+                            description: Options repriced from their own volatility history.
+                            type: integer
+                        proxy_positions:
+                            description: Options repriced from a curated proxy's volatility history.
+                            type: integer
+                        delta_fallback_positions:
+                            description: Options that kept the delta approximation.
+                            type: integer
+                        proxy_contracts:
+                            description: Proxied contract id to the contract whose history it used.
+                            type: object
+                            additionalProperties:
+                                type: string
+                        fallbacks:
+                            type: array
+                            items:
+                                type: object
+                                properties:
+                                    position_id:
+                                        type: string
+                                    contract_id:
+                                        type: string
+                                    reason:
+                                        type: string
+                                        enum:
+                                            - missing_volatility_history
+                                            - insufficient_volatility_history
+                                            - invalid_revaluation_input
                 vm_at_risk:
                     description: >-
                         Worst expected variation-margin outflow over the margin period of risk at the
