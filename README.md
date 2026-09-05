@@ -273,8 +273,8 @@ Standard listed futures and options.
 | `sub_account_name` | `string`         | —        | Sub-account display name                                                                     |
 | `exchange_code`    | `string`         | yes      | Exchange acronym (e.g. `"NYMEX"`, `"ICE.EU"`, `"EUREX"`, `"ASX"`)                            |
 | `contract_code`    | `string`         | yes      | Contract symbol (e.g. `"CL"`, `"B"`, `"FDAX"`)                                               |
-| `contract_type`    | `string`         | yes      | `"FUT"` / `"F"` / `"Future"` for futures, `"CALL"` for call options, `"PUT"` for put options |
-| `contract_expiry`  | `string`         | yes      | Expiry date. Accepts `YYYYMM`, `YYYYMMDD`, or `MMM-YY` formats                               |
+| `contract_type`    | `string`         | yes      | `"FUT"` / `"F"` / `"Future"` for futures, `"CALL"` for call options, `"PUT"` for put options, `"CASH"` for a cash contract (a single stock, ETF or index at OCC, TMX, Eurex, Euronext …) |
+| `contract_expiry`  | `string`         | futures and options | Expiry date. Accepts `YYYYMM`, `YYYYMMDD`, or `MMM-YY` formats. Omit for a cash contract, which has none |
 | `contract_strike`  | `string`         | —        | Strike price. Required for options, omit or leave empty for futures                          |
 | `net_position`     | `string\|number` | yes      | Position size (positive = long, negative = short)                                            |
 | `account_type`     | `string`         | —        | Margin account classification (see [Account Types](#account-types)). Default: `"H"`          |

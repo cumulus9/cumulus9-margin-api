@@ -552,11 +552,11 @@ components:
                     type: string
                     example: B
                 contract_type:
-                    description: '`FUT` / `F` / `Future` for futures, `CALL` for call options, `PUT` for put options.'
+                    description: '`FUT` / `F` / `Future` for futures, `CALL` for call options, `PUT` for put options, `CASH` for a cash contract (a single stock, ETF or index).'
                     type: string
                     example: FUT
                 contract_expiry:
-                    description: Expiry date. Accepts `YYYYMM`, `YYYYMMDD`, or `MMM-YY` formats.
+                    description: Expiry date. Accepts `YYYYMM`, `YYYYMMDD`, or `MMM-YY` formats. Omit for a cash contract, which has none.
                     type: string
                     example: '202512'
                 contract_strike:
