@@ -374,9 +374,8 @@ components:
                     type: boolean
                     default: true
                 free_risk_rate:
-                    description: Risk-free rate for analytics calculations.
+                    description: Optional portfolio-wide analytics override. When omitted, validated ETD options use their maturity-matched validation rate; positions without one fall back to 0.01.
                     type: number
-                    default: 0.01
                 stress_test_enabled:
                     description: Enable stress testing on the portfolio.
                     type: boolean
@@ -552,11 +551,11 @@ components:
                     type: string
                     example: B
                 contract_type:
-                    description: '`FUT` / `F` / `Future` for futures, `CALL` for call options, `PUT` for put options.'
+                    description: '`FUT` / `F` / `Future` for futures, `CALL` for call options, `PUT` for put options, `CASH` for a cash contract (a single stock, ETF or index).'
                     type: string
                     example: FUT
                 contract_expiry:
-                    description: Expiry date. Accepts `YYYYMM`, `YYYYMMDD`, or `MMM-YY` formats.
+                    description: Expiry date. Accepts `YYYYMM`, `YYYYMMDD`, or `MMM-YY` formats. Omit for a cash contract, which has none.
                     type: string
                     example: '202512'
                 contract_strike:

@@ -171,7 +171,7 @@ event = {
     "use_closest_active": True,
     "stress_test_enabled": True,
     "stress_test_details_enabled": True,
-    "free_risk_rate": 0.05,
+    "free_risk_rate": 0.05,  # Explicit portfolio-wide override; omit to use validated ETD curve rates.
 }
 
 response = post("/portfolios", event)
