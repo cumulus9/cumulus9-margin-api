@@ -67,7 +67,7 @@ All parameters are set at the top level of the JSON request body alongside the `
 | `stress_sensitivities`        | `object`        | —                     | Configuration for stress scenario analysis (see below)                                                                                         |
 | `stress_test_enabled`         | `boolean`       | `false`               | Enable stress testing on the portfolio                                                                                                         |
 | `stress_test_details_enabled` | `boolean`       | `false`               | Include detailed stress test drill-down                                                                                                        |
-| `pricing`                     | `object`        | —                     | `{ "enabled": true }` to include live pricing                                                                                                  |
+| `pricing`                     | `object`        | —                     | Deprecated and ignored. Live pricing follows the environment's Market Data licence, not a per-portfolio flag; the key is still accepted   |
 | `position_limits_enabled`     | `boolean`       | `false`               | Enable position limit checks                                                                                                                   |
 | `fx_margin_parameters`        | `object`        | —                     | FX margin rate overrides, keyed by currency pair (e.g. `{ "EUR_USD": 0.02 }`)                                                                  |
 
