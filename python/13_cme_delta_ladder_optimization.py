@@ -1,11 +1,12 @@
 # Cumulus9 - All rights reserved.
 # Calculate CME listed-rates and delta-ladder margin, then optimize it.
 
+import os
 import requests
 
 # Credentials -- contact support@cumulus9.com to obtain these.
-C9_API_ENDPOINT = "xxxxxxxxxxxxxxxxxx"
-C9_API_SECRET = "sk-xxxxxxxxxxxxxxxxxx"
+C9_API_ENDPOINT = os.getenv("C9_API_ENDPOINT", "xxxxxxxxxxxxxxxxxx")
+C9_API_SECRET = os.getenv("C9_API_SECRET", "sk-xxxxxxxxxxxxxxxxxx")
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -22,7 +23,7 @@ payload = {
             "exchange_code": "CME",
             "contract_code": "SR3",
             "contract_type": "FUT",
-            "contract_expiry": "202703",
+            "contract_expiry": "202803",
             "net_position": 250,
             "account_type": "H",
         },
@@ -73,13 +74,13 @@ for leg in optimization["legs"]:
 
 # Example staging output on 6 September 2026:
 #
-# Combined initial margin: $2,963,424.10
-# Baseline total: $2,963,424.10
-# Optimized total: $2,802,109.97
-# Saving: $161,314.13
-# Saving: 5.44%
+# Combined initial margin: $2,957,174.10
+# Baseline total: $2,957,174.10
+# Optimized total: $2,940,276.84
+# Saving: $16,897.26
+# Saving: 0.57%
 #
 # Recommended futures allocation:
-# SR3 - Three-Month SOFR (SR3) Futures: MOVE_TO_SEQ
-# Lots moved to cleared rates: 250
-# Lots left in listed margin: 0
+# SR3 - Three-Month SOFR (SR3) Futures: SPLIT
+# Lots moved to cleared rates: 170
+# Lots left in listed margin: 80

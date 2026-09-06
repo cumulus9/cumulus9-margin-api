@@ -2,11 +2,12 @@
 # Basic synchronous margin calculation for an ETD portfolio.
 
 import json
+import os
 import requests
 
 # Credentials -- contact support@cumulus9.com to obtain these.
-C9_API_ENDPOINT = "xxxxxxxxxxxxxxxxxx"
-C9_API_SECRET = "sk-xxxxxxxxxxxxxxxxxx"
+C9_API_ENDPOINT = os.getenv("C9_API_ENDPOINT", "xxxxxxxxxxxxxxxxxx")
+C9_API_SECRET = os.getenv("C9_API_SECRET", "sk-xxxxxxxxxxxxxxxxxx")
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -28,13 +29,14 @@ def post_portfolio(payload: dict) -> dict:
 payload = {
     "vendor_symbology": "clearing",
     "calculation_type": "margins",
+    "in_memory": True,
     "portfolio": [
         {
             "account_code": "Account 001",
             "exchange_code": "ASX",
-            "contract_code": "XT",
-            "contract_type": "F",
-            "contract_expiry": "DEC-25",
+            "contract_code": "AP",
+            "contract_type": "FUT",
+            "contract_expiry": "DEC-27",
             "contract_strike": "",
             "net_position": "500",
             "account_type": "H",
@@ -43,8 +45,8 @@ payload = {
             "account_code": "Account 001",
             "exchange_code": "ICE.EU",
             "contract_code": "B",
-            "contract_type": "Future",
-            "contract_expiry": "DEC-25",
+            "contract_type": "FUT",
+            "contract_expiry": "DEC-27",
             "contract_strike": "",
             "net_position": "500",
             "account_type": "H",
@@ -54,8 +56,8 @@ payload = {
             "exchange_code": "NYMEX",
             "contract_code": "LO",
             "contract_type": "CALL",
-            "contract_expiry": "202512",
-            "contract_strike": "50.1",
+            "contract_expiry": "DEC-27",
+            "contract_strike": "50",
             "net_position": "-1000",
             "account_type": "H",
         },
@@ -64,7 +66,7 @@ payload = {
             "exchange_code": "EUREX",
             "contract_code": "FDAX",
             "contract_type": "FUT",
-            "contract_expiry": "202612",
+            "contract_expiry": "17-DEC-27",
             "contract_strike": "",
             "net_position": "-50",
             "account_type": "H",

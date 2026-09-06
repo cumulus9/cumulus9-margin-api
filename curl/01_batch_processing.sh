@@ -24,9 +24,9 @@ BATCH_RESPONSE=$(curl -s -X POST "${C9_API_ENDPOINT}/portfolios/batch" \
         {
             "account_code": "Account 001",
             "exchange_code": "ASX",
-            "contract_code": "XT",
-            "contract_type": "F",
-            "contract_expiry": "DEC-26",
+            "contract_code": "AP",
+            "contract_type": "FUT",
+            "contract_expiry": "DEC-27",
             "net_position": "500",
             "account_type": "H"
         },
@@ -35,7 +35,7 @@ BATCH_RESPONSE=$(curl -s -X POST "${C9_API_ENDPOINT}/portfolios/batch" \
             "exchange_code": "ICE.EU",
             "contract_code": "B",
             "contract_type": "FUT",
-            "contract_expiry": "202612",
+            "contract_expiry": "DEC-27",
             "net_position": "1000",
             "account_type": "H"
         },
@@ -44,7 +44,7 @@ BATCH_RESPONSE=$(curl -s -X POST "${C9_API_ENDPOINT}/portfolios/batch" \
             "exchange_code": "EUREX",
             "contract_code": "FDAX",
             "contract_type": "FUT",
-            "contract_expiry": "202612",
+            "contract_expiry": "17-DEC-27",
             "net_position": "-50",
             "account_type": "H"
         }

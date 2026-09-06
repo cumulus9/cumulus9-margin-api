@@ -19,20 +19,63 @@ API keys use the `sk-...` prefix format. To obtain credentials (`C9_API_ENDPOINT
 
 ---
 
-## Endpoints
+## Public endpoints
 
-| Method | Path                            | Description                                                 |
-| ------ | ------------------------------- | ----------------------------------------------------------- |
-| `POST` | `/portfolios`                   | Submit a portfolio and receive margin results synchronously |
-| `POST` | `/portfolios/optimize`          | Optimize eligible CME rates futures between listed and cleared-rates margin |
-| `POST` | `/portfolios/batch`             | Submit a large portfolio for background processing          |
-| `GET`  | `/portfolios/batch/:batch_id`   | Poll batch job status and progress                          |
-| `GET`  | `/portfolios/batch/:batch_id/results` | Every account the batch calculated, in one call       |
-| `GET`  | `/results`                      | Full drill-down for one calculation                         |
-| `GET`  | `/results/accounts`             | Latest results for every live account, whatever produced them |
-| `POST` | `/portfolios/stage`             | Stage a portfolio for comparison without calculating it     |
-| `POST` | `/portfolios/stage/submit`      | Calculate a staged portfolio, or diff it against a prior submission |
-| `GET`  | `/healthcheck/analytics-engine` | Check engine status and available margin parameters         |
+`open-api-schema.yaml` is the canonical external contract. The public surface is
+limited to the operations below.
+
+### Calculations and results
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `POST` | `/portfolios` | Calculate margin and analytics synchronously |
+| `POST` | `/portfolios/optimize` | Optimize eligible CME rates futures between listed and cleared-rates margin |
+| `POST` | `/portfolios/batch` | Submit a large portfolio for background processing |
+| `GET` | `/portfolios/batch/{batch_id}` | Poll batch status and progress |
+| `GET` | `/portfolios/batch/{batch_id}/results` | Fetch every account calculated by a batch |
+| `GET` | `/results` | Fetch the full drill-down for one calculation |
+| `GET` | `/results/accounts` | Fetch the latest live result for each visible account |
+
+### Stress scenarios
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/stress-test/scenarios` | List built-in and caller-owned scenarios |
+| `POST` | `/stress-test/scenarios` | Create or replace caller-owned scenarios |
+| `DELETE` | `/stress-test/scenarios` | Delete one caller-owned scenario |
+
+### Contract discovery and validation
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/validation-reference/exchanges` | List enabled exchanges |
+| `GET` | `/validation-reference/contracts/{exchange_code}` | List contracts for an exchange |
+| `GET` | `/validation-reference/contract-type/{exchange_code}/{contract_code}` | List contract types |
+| `GET` | `/validation-reference/expiries/{exchange_code}/{contract_code}/{contract_type}` | List expiries |
+| `GET` | `/validation-reference/strikes/{exchange_code}/{contract_code}/{contract_type}/{expiry}` | List option strikes |
+| `GET` | `/validation-reference/fi-reference` | Get fixed-income reference values |
+| `GET` | `/validation-reference/irs-reference` | Get cleared-rates reference values |
+| `GET` | `/validation-reference/ladder-reference` | Get rates delta-ladder reference values |
+| `GET` | `/validation-reference/fx-symbols` | List currency codes supported in FX pairs |
+| `POST` | `/validation-reference/portfolios` | Validate and standardise a portfolio without calculating it |
+
+### Event-market discovery
+
+These endpoints are available only when the requested event-market exchange is
+enabled on your licence. An unlicensed request returns `403` with
+`EVENT_MARKET_NOT_LICENSED`.
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/validation-reference/events/search` | Search active event markets |
+| `GET` | `/validation-reference/events/contracts` | List active event-market contracts |
+
+### Staged What-If
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `POST` | `/portfolios/stage` | Validate and save a changed portfolio |
+| `POST` | `/portfolios/stage/submit` | Compare the stage with a stored baseline |
 
 ---
 
@@ -136,8 +179,8 @@ For large portfolios or high-volume workloads, use the batch endpoint. It accept
 The flow is four steps:
 
 1. `POST /portfolios/batch` -- returns `202` with a `batch_id`
-2. `GET /portfolios/batch/:batch_id` -- poll until `status` is terminal
-3. `GET /portfolios/batch/:batch_id/results` -- every account the batch calculated
+2. `GET /portfolios/batch/{batch_id}` -- poll until `status` is terminal
+3. `GET /portfolios/batch/{batch_id}/results` -- every account the batch calculated
 4. `GET /results` -- optional, the full drill-down for one account
 
 ### How it works
@@ -148,7 +191,7 @@ A worker then picks the job up and splits the portfolio into chunks by account. 
 
 Two consequences matter to a caller:
 
-- **Chunking is invisible, and you should keep it that way.** `GET /portfolios/batch/:batch_id/results` answers at the level you submitted, so you never need to know how the portfolio was divided.
+- **Chunking is invisible, and you should keep it that way.** `GET /portfolios/batch/{batch_id}/results` answers at the level you submitted, so you never need to know how the portfolio was divided.
 - **A `request_id` sent in the payload is not used.** `POST /portfolios` honours one; `POST /portfolios/batch` assigns its own to each chunk. Track your submission by `batch_id`.
 
 ### POST `/portfolios/batch`
@@ -173,7 +216,7 @@ Submit a portfolio for background processing.
 
 **Limits**: Maximum payload size is 500 MB.
 
-### GET `/portfolios/batch/:batch_id`
+### GET `/portfolios/batch/{batch_id}`
 
 Poll the status of a batch job.
 
@@ -202,7 +245,7 @@ Poll the status of a batch job.
 | `completed_pct`  | `number`  | Completion percentage (0--100)                                                      |
 | `request_ids`    | `string[]`| The IDs the batch's results are stored under, one per chunk. Present only once `status` is terminal. Needed only for the drill-down described below |
 
-### GET `/portfolios/batch/:batch_id/results`
+### GET `/portfolios/batch/{batch_id}/results`
 
 Every account the batch calculated, in one call.
 
@@ -277,6 +320,81 @@ A `request_id` supplied in the request body is honoured by `POST /portfolios` bu
 
 ---
 
+## Stress Scenarios
+
+Use `GET /stress-test/scenarios` to list the built-in and caller-owned scenarios
+available to your API key. Create one or more caller-owned scenarios with
+`POST /stress-test/scenarios`:
+
+```json
+[
+    {
+        "scenario_name": "Equity risk-off",
+        "scenario_definition": {
+            "sector": {
+                "Equity": { "underlying": -0.10, "volatility": 0.20 }
+            }
+        }
+    }
+]
+```
+
+The response contains the assigned IDs:
+
+```json
+{ "scenario_ids": ["a1b2c3d4-e5f6-7890-abcd-ef1234567890"] }
+```
+
+Pass one ID as `scenario_id` to `DELETE /stress-test/scenarios`. Built-in
+scenarios cannot be deleted. To run the available scenarios, set
+`stress_test_enabled: true` on `POST /portfolios`. Set
+`stress_test_details_enabled: true` when you also need position-level detail.
+
+Scenario rules may target `sector`, `sub_sector`, `underlying`, or `expiry`.
+The most specific matching rule wins.
+
+---
+
+## Contract Discovery and Validation
+
+Build valid portfolio rows from the reference endpoints instead of hard-coding
+contract values:
+
+1. List exchanges with `GET /validation-reference/exchanges`.
+2. Select a contract with `GET /validation-reference/contracts/{exchange_code}`.
+3. Select its type, expiry, and option strike from the corresponding endpoints.
+4. Send the completed payload to `POST /validation-reference/portfolios` for
+   strict validation before calculating it.
+
+Path values must be URL encoded. Expiry and contract formats can differ by
+venue, so use the values returned by the API unchanged.
+
+The specialised reference endpoints provide accepted values for fixed income,
+cleared interest-rate swaps, rates delta ladders, and FX:
+
+```text
+GET /validation-reference/fi-reference
+GET /validation-reference/irs-reference
+GET /validation-reference/ladder-reference
+GET /validation-reference/fx-symbols
+```
+
+### Event-market discovery
+
+Event markets are licence-gated by exchange. Search the enabled venue before
+building the position:
+
+```bash
+curl -sS "$C9_API_ENDPOINT/validation-reference/events/search?exchange=KALSHI&q=Apple&limit=20" \
+  -H "Authorization: Bearer $C9_API_SECRET"
+```
+
+Use `GET /validation-reference/events/contracts?exchange=KALSHI` when you want
+up to 200 active contracts without a search term. Both endpoints return `403`
+with `EVENT_MARKET_NOT_LICENSED` when the venue is not enabled on your licence.
+
+---
+
 ## Position Types
 
 The `portfolio` array supports eight position types. You can mix different types within a single request across multiple accounts.
@@ -318,7 +436,7 @@ Standard listed futures and options.
     "exchange_code": "NYMEX",
     "contract_code": "CL",
     "contract_type": "FUT",
-    "contract_expiry": "202512",
+    "contract_expiry": "202712",
     "net_position": "500",
     "account_type": "H"
 }
@@ -352,7 +470,7 @@ Cash bond positions for analytics and margin calculations.
 
 ### Event Markets
 
-Binary event contracts from supported event exchanges. Use `side` and `quantity`, or provide a signed `net_position`. Event margin and analytics are returned together when `calculation_type` includes `margins`.
+Binary event contracts from supported event exchanges. Use `side` and `quantity`, or provide a signed `net_position`. Event margin and analytics are returned together when `calculation_type` includes `margins`. Discovery, validation, and calculation are available only when the requested exchange is enabled on your licence.
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
@@ -405,14 +523,16 @@ Foreign exchange positions.
 | --------------- | -------- | -------- | --------------------------------------------------- |
 | `account_code`  | `string` | yes      | Internal account identifier                         |
 | `currency_pair` | `string` | yes      | Currency pair (e.g. `"EUR_USD"`, `"GBP_JPY"`)       |
-| `contract_type` | `string` | —        | Contract type                                       |
-| `expiry`        | `string` | —        | Expiry date                                         |
+| `contract_type` | `string` | yes      | `"FX"`                                             |
+| `expiry`        | `string` | yes      | Maturity date                                       |
 | `amount`        | `number` | yes      | Notional amount (positive = long, negative = short) |
 
 ```json
 {
     "account_code": "Account 003",
     "currency_pair": "EUR_USD",
+    "contract_type": "FX",
+    "expiry": "20271231",
     "amount": 5000000
 }
 ```
@@ -669,6 +789,44 @@ Compare a modified portfolio against one you have already submitted, without
 disturbing the original. Stage the changed portfolio, then submit it naming the
 earlier `request_id` as the baseline.
 
+### POST `/portfolios/stage`
+
+The stage endpoint accepts the same tabular row shape as the portfolio loader.
+For a simple ETD comparison, each row is ordered as:
+
+```text
+line_id, account_code, exchange_code, contract_code, contract_type,
+contract_expiry, contract_strike, net_position, account_type
+```
+
+```json
+{
+    "type": "etd",
+    "data": [
+        ["0", "WHAT_IF_ACCOUNT", "ICE.EU", "B", "FUT", "DEC-27", "", "120", "H"]
+    ],
+    "idx": [0],
+    "errors": [],
+    "vendor_symbology": "clearing"
+}
+```
+
+The API validates the rows, saves the caller's stage, and returns the standardised
+rows plus any cell error coordinates:
+
+```json
+{
+    "request_id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+    "data": [["0", "WHAT_IF_ACCOUNT", "ICE.EU", "B", "FUT", "DEC-27", "", "120", "H"]],
+    "errors": []
+}
+```
+
+Inspect `errors` before submitting the comparison. Calling this endpoint again
+for the same loader type replaces that section of your current stage.
+An event-market stage is available only when its exchange is enabled on your
+licence. An unlicensed event stage returns `403` with `EVENT_MARKET_NOT_LICENSED`.
+
 ### POST `/portfolios/stage/submit`
 
 ```json
@@ -681,8 +839,8 @@ earlier `request_id` as the baseline.
 
 | Field          | Type     | Description                                                              |
 | -------------- | -------- | ------------------------------------------------------------------------ |
-| `action`       | `string` | `"what-if"`. Anything else calculates the staged portfolio normally      |
-| `request_id`   | `string` | The earlier submission to compare against — the "before" side            |
+| `action`       | `string` | Must be `"what-if"` for a comparison                                      |
+| `request_id`   | `string` | The earlier submission to compare against. This is the "before" side      |
 | `portfolio_id` | `string` | Which portfolio of that submission to compare                            |
 
 The staged portfolio is calculated synchronously and diffed against the stored
@@ -722,11 +880,8 @@ contract only in the baseline reports `im_usd_2: 0`, and one only in the staged
 portfolio reports `im_usd_1: 0`, so positions opened and closed both show up.
 `portfolio` is the same comparison at position level.
 
-**Authorisation.** You may run a what-if against any portfolio you are entitled
-to see, including one submitted by another user whose results you have access
-to. The baseline's owner is resolved server-side from the `request_id`; it is
-never read from the request body. Callers restricted to specific account codes
-may only compare portfolios within those codes.
+**Authorisation.** The stored baseline must be visible to the authenticated API
+key and within its permitted account codes.
 
 | Status | Meaning                                                                        |
 | ------ | ------------------------------------------------------------------------------ |
@@ -818,7 +973,7 @@ payload = {
             "exchange_code": "ICE.EU",
             "contract_code": "B",
             "contract_type": "FUT",
-            "contract_expiry": "202512",
+            "contract_expiry": "DEC-27",
             "net_position": "100",
             "account_type": "H"
         }
@@ -912,7 +1067,7 @@ curl -X POST "$C9_API_ENDPOINT/portfolios" \
             "exchange_code": "ICE.EU",
             "contract_code": "B",
             "contract_type": "FUT",
-            "contract_expiry": "202512",
+            "contract_expiry": "DEC-27",
             "net_position": "100",
             "account_type": "H"
         }
@@ -924,7 +1079,7 @@ See the language-specific directories for complete runnable examples:
 
 | Directory     | Examples                                                                                            |
 | ------------- | --------------------------------------------------------------------------------------------------- |
-| `python/`     | Basic margin, ageing, batch, healthcheck, SIMM, stress, Reg T vs TIMS, event risk, fixed income and FICC, CME rates optimization |
+| `python/`     | Basic margin, ageing, batch, SIMM, stress, Reg T vs TIMS, event risk, fixed income and FICC, CME rates optimization |
 | `javascript/` | Basic margin, batch processing                                                                      |
 | `curl/`       | Basic margin, batch processing                                                                      |
 | `csharp/`     | Basic margin                                                                                        |
@@ -983,7 +1138,7 @@ A multi-account, multi-asset-class request combining ETD, Fixed Income, FX, and 
             "exchange_code": "NYMEX",
             "contract_code": "CL",
             "contract_type": "FUT",
-            "contract_expiry": "202512",
+            "contract_expiry": "DEC-27",
             "net_position": "500",
             "account_type": "H"
         },
@@ -992,7 +1147,7 @@ A multi-account, multi-asset-class request combining ETD, Fixed Income, FX, and 
             "exchange_code": "NYMEX",
             "contract_code": "LO",
             "contract_type": "CALL",
-            "contract_expiry": "202512",
+            "contract_expiry": "DEC-27",
             "contract_strike": "50.1",
             "net_position": "-1000",
             "account_type": "H"
@@ -1002,7 +1157,7 @@ A multi-account, multi-asset-class request combining ETD, Fixed Income, FX, and 
             "exchange_code": "EUREX",
             "contract_code": "FDAX",
             "contract_type": "FUT",
-            "contract_expiry": "202612",
+            "contract_expiry": "17-DEC-27",
             "net_position": "-50",
             "account_type": "H"
         },
@@ -1018,6 +1173,8 @@ A multi-account, multi-asset-class request combining ETD, Fixed Income, FX, and 
         {
             "account_code": "Account 004",
             "currency_pair": "EUR_USD",
+            "contract_type": "FX",
+            "expiry": "20271231",
             "amount": 5000000
         },
         {

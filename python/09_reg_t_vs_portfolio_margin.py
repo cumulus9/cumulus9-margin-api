@@ -1,11 +1,12 @@
 # Cumulus9 - All rights reserved.
 # Compare OCC Reg T margin with OCC TIMS portfolio margin.
 
+import os
 import requests
 
 # Credentials -- contact support@cumulus9.com to obtain these.
-C9_API_ENDPOINT = "xxxxxxxxxxxxxxxxxx"
-C9_API_SECRET = "sk-xxxxxxxxxxxxxxxxxx"
+C9_API_ENDPOINT = os.getenv("C9_API_ENDPOINT", "xxxxxxxxxxxxxxxxxx")
+C9_API_SECRET = os.getenv("C9_API_SECRET", "sk-xxxxxxxxxxxxxxxxxx")
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -33,7 +34,7 @@ payload = {
             "exchange_code": "OCC",
             "contract_code": "AAPL",
             "contract_type": "CALL",
-            "contract_expiry": "20261016",
+            "contract_expiry": "20271217",
             "contract_strike": 340,
             "net_position": -1,
             "account_type": "REGT",
@@ -43,7 +44,7 @@ payload = {
             "exchange_code": "OCC",
             "contract_code": "AAPL",
             "contract_type": "PUT",
-            "contract_expiry": "20261016",
+            "contract_expiry": "20271217",
             "contract_strike": 300,
             "net_position": -1,
             "account_type": "REGT",
@@ -53,7 +54,7 @@ payload = {
             "exchange_code": "OCC",
             "contract_code": "AAPL",
             "contract_type": "CALL",
-            "contract_expiry": "20261016",
+            "contract_expiry": "20271217",
             "contract_strike": 350,
             "net_position": 1,
             "account_type": "REGT",
@@ -71,7 +72,7 @@ payload = {
             "exchange_code": "OCC",
             "contract_code": "AAPL",
             "contract_type": "CALL",
-            "contract_expiry": "20261016",
+            "contract_expiry": "20271217",
             "contract_strike": 340,
             "net_position": -1,
             "account_type": "C",
@@ -81,7 +82,7 @@ payload = {
             "exchange_code": "OCC",
             "contract_code": "AAPL",
             "contract_type": "PUT",
-            "contract_expiry": "20261016",
+            "contract_expiry": "20271217",
             "contract_strike": 300,
             "net_position": -1,
             "account_type": "C",
@@ -91,7 +92,7 @@ payload = {
             "exchange_code": "OCC",
             "contract_code": "AAPL",
             "contract_type": "CALL",
-            "contract_expiry": "20261016",
+            "contract_expiry": "20271217",
             "contract_strike": 350,
             "net_position": 1,
             "account_type": "C",
@@ -115,6 +116,6 @@ print(f"TIMS minus Reg T: {sign}${abs(difference):,.2f}")
 
 # Example staging output on 6 September 2026:
 #
-# Reg T initial margin: $20,951.90
-# TIMS portfolio margin: $7,163.66
-# TIMS minus Reg T: -$13,788.24
+# Reg T initial margin: $26,350.91
+# TIMS portfolio margin: $6,638.13
+# TIMS minus Reg T: -$19,712.78

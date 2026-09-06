@@ -1,11 +1,12 @@
 # Cumulus9 - All rights reserved.
 # Calculate fixed-income VaR, stress tests and FICC margin.
 
+import os
 import requests
 
 # Credentials -- contact support@cumulus9.com to obtain these.
-C9_API_ENDPOINT = "xxxxxxxxxxxxxxxxxx"
-C9_API_SECRET = "sk-xxxxxxxxxxxxxxxxxx"
+C9_API_ENDPOINT = os.getenv("C9_API_ENDPOINT", "xxxxxxxxxxxxxxxxxx")
+C9_API_SECRET = os.getenv("C9_API_SECRET", "sk-xxxxxxxxxxxxxxxxxx")
 
 HEADERS = {
     "Content-Type": "application/json",

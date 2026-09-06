@@ -4,12 +4,13 @@
 
 import datetime
 import json
+import os
 import pandas as pd
 import requests
 
 # Credentials -- contact support@cumulus9.com to obtain these.
-C9_API_ENDPOINT = "xxxxxxxxxxxxxxxxxx"
-C9_API_SECRET = "sk-xxxxxxxxxxxxxxxxxx"
+C9_API_ENDPOINT = os.getenv("C9_API_ENDPOINT", "xxxxxxxxxxxxxxxxxx")
+C9_API_SECRET = os.getenv("C9_API_SECRET", "sk-xxxxxxxxxxxxxxxxxx")
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -57,6 +58,7 @@ def calculate_total_margin(df: pd.DataFrame) -> float:
     payload = {
         "vendor_symbology": "clearing",
         "calculation_type": "margins",
+        "in_memory": True,
         "portfolio": json.loads(df.to_json(orient="records")),
     }
     results = post_portfolio(payload)
@@ -77,3 +79,10 @@ for days in offsets:
     margin = calculate_total_margin(aged)
     label = "now" if days == 0 else f"{days}d"
     print(f"{label}:\t${margin:,.0f}")
+
+# Example staging output on 6 September 2026:
+#
+# now:  $715,258
+# 30d:  $725,926
+# 90d:  $752,732
+# 120d: $774,181
