@@ -862,12 +862,15 @@ components:
                     type: boolean
                     default: false
                 pricing:
-                    description: Pricing configuration.
+                    description: >-
+                        Deprecated and ignored. Live pricing is controlled by the
+                        environment's Market Data licence, not per portfolio. The key
+                        is still accepted so existing integrations keep working.
                     type: object
+                    deprecated: true
                     properties:
                         enabled:
                             type: boolean
-                            default: false
                 fx_margin_parameters:
                     description: FX margin rate overrides, keyed by currency pair (e.g. `EUR_USD`).
                     type: object
@@ -2253,8 +2256,9 @@ components:
                     format: date-time
                 status:
                     description: >-
-                        Calculation state of the account: live, static, warning, failed or
-                        loading. Null on a row read from the durable record.
+                        Calculation state of the account: live, completed, warning, failed or
+                        loading. `completed` is a finished calculation that is not live, such
+                        as a dated run. Null on a row read from the durable record.
                     type: string
                     nullable: true
                 source:
