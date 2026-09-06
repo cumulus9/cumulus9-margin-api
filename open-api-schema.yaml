@@ -848,10 +848,6 @@ components:
                 risk_free_rate:
                     description: Optional portfolio-wide analytics override. When omitted, validated ETD options use their maturity-matched validation rate; positions without one fall back to 0.01.
                     type: number
-                free_risk_rate:
-                    description: Deprecated spelling of risk_free_rate, accepted until 2026-12-05.
-                    type: number
-                    deprecated: true
                 stress_test_enabled:
                     description: Enable stress testing on the portfolio.
                     type: boolean
