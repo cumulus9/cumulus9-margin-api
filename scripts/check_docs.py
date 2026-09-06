@@ -138,6 +138,7 @@ def check_sample_expiries() -> None:
     patterns = [
         re.compile(r"contract_expiry\s*[=:]\s*[\"']([^\"']+)[\"']", re.IGNORECASE),
         re.compile(r'"contract_expiry"\s*:\s*"([^"]+)"', re.IGNORECASE),
+        re.compile(r'""contract_expiry""\s*:\s*""([^"]+)""', re.IGNORECASE),
     ]
     for path in ROOT.rglob("*"):
         if (

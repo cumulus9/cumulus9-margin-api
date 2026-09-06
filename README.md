@@ -824,6 +824,8 @@ rows plus any cell error coordinates:
 
 Inspect `errors` before submitting the comparison. Calling this endpoint again
 for the same loader type replaces that section of your current stage.
+An event-market stage is available only when its exchange is enabled on your
+licence. An unlicensed event stage returns `403` with `EVENT_MARKET_NOT_LICENSED`.
 
 ### POST `/portfolios/stage/submit`
 
@@ -878,11 +880,8 @@ contract only in the baseline reports `im_usd_2: 0`, and one only in the staged
 portfolio reports `im_usd_1: 0`, so positions opened and closed both show up.
 `portfolio` is the same comparison at position level.
 
-**Authorisation.** You may run a what-if against any portfolio you are entitled
-to see, including one submitted by another user whose results you have access
-to. The baseline's owner is resolved server-side from the `request_id`; it is
-never read from the request body. Callers restricted to specific account codes
-may only compare portfolios within those codes.
+**Authorisation.** The stored baseline must be visible to the authenticated API
+key and within its permitted account codes.
 
 | Status | Meaning                                                                        |
 | ------ | ------------------------------------------------------------------------------ |

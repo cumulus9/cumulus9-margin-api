@@ -688,7 +688,8 @@ paths:
             description: |
                 Save one tabular loader section for the authenticated caller. For an ETD
                 What-If comparison, each row is ordered as line ID, account code, exchange,
-                contract, type, expiry, strike, net position, and account type.
+                contract, type, expiry, strike, net position, and account type. Event-market
+                stages require the requested exchange to be enabled on the caller's licence.
             operationId: stagePortfolio
             tags: [what-if]
             requestBody:
@@ -708,6 +709,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/EventMarketNotLicensed'
 
     /portfolios/stage/submit:
         post:
@@ -1050,8 +1053,9 @@ components:
                     example: '202512'
                 contract_strike:
                     description: Option strike price. Required for CALL/PUT, omit for futures.
-                    type: string
-                    default: ''
+                    oneOf:
+                        - type: string
+                        - type: number
                 net_position:
                     description: Position size (positive = long, negative = short).
                     oneOf:
@@ -2350,7 +2354,10 @@ components:
                 expiry:
                     type: object
                     additionalProperties:
-                        $ref: '#/components/schemas/StressShock'
+                        type: object
+                        description: Shocks keyed by expiry for this underlying.
+                        additionalProperties:
+                            $ref: '#/components/schemas/StressShock'
 
         StressShock:
             type: object
@@ -2358,6 +2365,16 @@ components:
                 override:
                     type: boolean
                     default: false
+                type:
+                    description: Interpret the underlying shock as a relative percentage or an absolute value.
+                    type: string
+                    enum: [Relative, Absolute]
+                    default: Relative
+                volatility_type:
+                    description: Interpret the volatility shock as a relative percentage or an absolute value.
+                    type: string
+                    enum: [Relative, Absolute]
+                    default: Relative
                 underlying:
                     description: Decimal price shock, for example -0.10 for minus 10 percent.
                     type: number
