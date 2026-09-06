@@ -3,11 +3,12 @@
 # positions in a single request with margins + analytics + SIMM.
 
 import json
+import os
 import requests
 
 # Credentials -- contact support@cumulus9.com to obtain these.
-C9_API_ENDPOINT = "xxxxxxxxxxxxxxxxxx"
-C9_API_SECRET = "sk-xxxxxxxxxxxxxxxxxx"
+C9_API_ENDPOINT = os.getenv("C9_API_ENDPOINT", "xxxxxxxxxxxxxxxxxx")
+C9_API_SECRET = os.getenv("C9_API_SECRET", "sk-xxxxxxxxxxxxxxxxxx")
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -30,6 +31,7 @@ payload = {
     "calculation_type": "margins,analytics,simm",
     "vendor_symbology": "clearing",
     "currency_code": "USD",
+    "in_memory": True,
     "use_closest_match": True,
     "risk_metrics": {
         "lookback": 250,
@@ -51,7 +53,7 @@ payload = {
             "exchange_code": "NYMEX",
             "contract_code": "CL",
             "contract_type": "FUT",
-            "contract_expiry": "202612",
+            "contract_expiry": "DEC-27",
             "net_position": "500",
             "account_type": "H",
         },
@@ -60,7 +62,7 @@ payload = {
             "exchange_code": "NYMEX",
             "contract_code": "LO",
             "contract_type": "CALL",
-            "contract_expiry": "202612",
+            "contract_expiry": "DEC-27",
             "contract_strike": "75",
             "net_position": "-200",
             "account_type": "H",
@@ -70,7 +72,7 @@ payload = {
             "exchange_code": "EUREX",
             "contract_code": "FDAX",
             "contract_type": "FUT",
-            "contract_expiry": "202612",
+            "contract_expiry": "17-DEC-27",
             "net_position": "-50",
             "account_type": "H",
         },
@@ -97,12 +99,9 @@ payload = {
         {
             "account_code": "FX_Account",
             "currency_pair": "EUR_USD",
+            "contract_type": "FX",
+            "expiry": "20271231",
             "amount": 5000000,
-        },
-        {
-            "account_code": "FX_Account",
-            "currency_pair": "GBP_JPY",
-            "amount": -3000000,
         },
         # --- Fixed Income by CUSIP ---
         {

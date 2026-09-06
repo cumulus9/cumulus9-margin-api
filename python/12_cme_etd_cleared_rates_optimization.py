@@ -1,11 +1,12 @@
 # Cumulus9 - All rights reserved.
 # Calculate CME listed-rates and cleared-IRS margin, then optimize it.
 
+import os
 import requests
 
 # Credentials -- contact support@cumulus9.com to obtain these.
-C9_API_ENDPOINT = "xxxxxxxxxxxxxxxxxx"
-C9_API_SECRET = "sk-xxxxxxxxxxxxxxxxxx"
+C9_API_ENDPOINT = os.getenv("C9_API_ENDPOINT", "xxxxxxxxxxxxxxxxxx")
+C9_API_SECRET = os.getenv("C9_API_SECRET", "sk-xxxxxxxxxxxxxxxxxx")
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -22,7 +23,7 @@ payload = {
             "exchange_code": "CME",
             "contract_code": "SR3",
             "contract_type": "FUT",
-            "contract_expiry": "202703",
+            "contract_expiry": "202803",
             "net_position": -250,
             "account_type": "H",
         },
@@ -83,11 +84,11 @@ for leg in optimization["legs"]:
 
 # Example staging output on 6 September 2026:
 #
-# Combined initial margin: $3,533,995.46
-# Baseline total: $3,533,995.46
-# Optimized total: $3,074,186.71
-# Saving: $459,808.75
-# Saving: 13.01%
+# Combined initial margin: $3,527,745.46
+# Baseline total: $3,527,745.46
+# Optimized total: $2,992,170.20
+# Saving: $535,575.26
+# Saving: 15.18%
 #
 # Recommended futures allocation:
 # SR3 - Three-Month SOFR (SR3) Futures: MOVE_TO_SEQ

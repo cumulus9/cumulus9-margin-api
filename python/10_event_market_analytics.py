@@ -1,18 +1,20 @@
 # Cumulus9 - All rights reserved.
 # Calculate margin and risk analytics for event-market positions.
 
+import os
 import requests
 
 # Credentials -- contact support@cumulus9.com to obtain these.
-C9_API_ENDPOINT = "xxxxxxxxxxxxxxxxxx"
-C9_API_SECRET = "sk-xxxxxxxxxxxxxxxxxx"
+C9_API_ENDPOINT = os.getenv("C9_API_ENDPOINT", "xxxxxxxxxxxxxxxxxx")
+C9_API_SECRET = os.getenv("C9_API_SECRET", "sk-xxxxxxxxxxxxxxxxxx")
 
 HEADERS = {
     "Content-Type": "application/json",
     "Authorization": f"Bearer {C9_API_SECRET}",
 }
 
-# Event tickers change as markets expire. Replace these with active tickers.
+# Event-market discovery is licence-gated. Use the discovery endpoints to roll
+# these tickers when their markets expire.
 payload = {
     "vendor_symbology": "clearing",
     "calculation_type": "margins",
@@ -22,10 +24,10 @@ payload = {
             "account_code": "EVENT_ACCOUNT",
             "market_type": "EVENT",
             "exchange_code": "KALSHI",
-            "ticker": "KXMARALAGO-27-RDES",
+            "ticker": "AMAZONFTC-29DEC31",
             "side": "YES",
             "quantity": 1000,
-            "price_dollars": 0.54,
+            "price_dollars": 0.535,
             "netting_enabled": True,
             "currency_code": "USD",
         },
@@ -33,10 +35,10 @@ payload = {
             "account_code": "EVENT_ACCOUNT",
             "market_type": "EVENT",
             "exchange_code": "KALSHI",
-            "ticker": "KXNFLDPOTY-27-KHAM",
+            "ticker": "APPLEUS-29DEC31",
             "side": "NO",
             "quantity": 600,
-            "price_dollars": 0.63,
+            "price_dollars": 0.27,
             "netting_enabled": True,
             "currency_code": "USD",
         },
@@ -69,26 +71,26 @@ for shock in event_risk["probability_shocks"]["portfolio"]:
 
 # Example staging output on 6 September 2026:
 #
-# Event initial margin: $918.00
-# Value at risk: $23.64
-# Expected shortfall: $23.64
-# Worst stress loss: $262.00
+# Event initial margin: $697.00
+# Value at risk: $20.01
+# Expected shortfall: $20.01
+# Worst stress loss: $697.00
 # Worst stress scenario: full_settlement
 # Positions modelled: 2
 #
 # Settlement scenarios:
-# adverse_1sd: -$40.03
-# adverse_2sd: -$80.06
-# adverse_3sd: -$120.10
-# directional_up_3sd: $120.10
-# directional_down_3sd: -$120.10
-# full_settlement: -$262.00
+# adverse_1sd: -$21.97
+# adverse_2sd: -$43.94
+# adverse_3sd: -$65.91
+# directional_up_3sd: $20.02
+# directional_down_3sd: -$20.02
+# full_settlement: -$697.00
 #
 # Probability shocks:
-# -30%: -$245.00
-# -20%: -$200.00
-# -10%: -$100.00
+# -30%: -$120.00
+# -20%: -$80.00
+# -10%: -$40.00
 # +0%: $0.00
-# +10%: $100.00
-# +20%: $200.00
-# +30%: $300.00
+# +10%: $40.00
+# +20%: $80.00
+# +30%: $141.00

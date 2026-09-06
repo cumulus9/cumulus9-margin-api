@@ -18,7 +18,7 @@ for (let i = 0; i < 200; i++) {
         exchange_code: 'ICE.EU',
         contract_code: 'B',
         contract_type: 'FUT',
-        contract_expiry: '202512',
+        contract_expiry: 'DEC-27',
         net_position: String(100 * (i + 1)),
         account_type: 'H',
     })

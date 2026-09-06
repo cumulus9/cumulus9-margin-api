@@ -19,6 +19,7 @@ info:
         url: https://cumulus9.com
     license:
         name: MIT
+        url: https://opensource.org/license/mit
 tags:
     - name: portfolios
       description: Submit portfolios and calculate margin requirements
@@ -26,11 +27,21 @@ tags:
       description: Batch processing for large portfolios
     - name: results
       description: Read back the results of a completed calculation
-    - name: healthcheck
-      description: Check engine status and available margin parameters
+    - name: stress-scenarios
+      description: Manage reusable stress-test scenarios
+    - name: validation-reference
+      description: Discover valid public contract values and validate portfolios
+    - name: event-markets
+      description: Discover licensed event-market contracts
+    - name: what-if
+      description: Stage a changed portfolio and compare it with a stored result
 servers:
-    - url: '{{baseUrl}}'
+    - url: 'https://{host}'
       description: Your Cumulus9 API endpoint
+      variables:
+          host:
+              default: staging.api.cumulus9.com
+              description: Host issued with your API credentials.
 paths:
     /portfolios:
         post:
@@ -60,7 +71,7 @@ paths:
                                           exchange_code: ICE.EU
                                           contract_code: B
                                           contract_type: FUT
-                                          contract_expiry: '202512'
+                                          contract_expiry: 'DEC-27'
                                           net_position: '100'
                                           account_type: H
                             simm_calculation:
@@ -104,6 +115,8 @@ paths:
                                     portfolio:
                                         - account_code: Account 001
                                           currency_pair: EUR_USD
+                                          contract_type: FX
+                                          expiry: '20271231'
                                           amount: 5000000
             responses:
                 '200':
@@ -112,6 +125,13 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    description: An event-market exchange in the portfolio is not enabled on the caller's licence.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: true
                 '429':
                     $ref: '#/components/responses/RateLimited'
                 '500':
@@ -337,26 +357,419 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /healthcheck/analytics-engine:
+    /results/accounts:
         get:
-            summary: Check engine health
-            description: Returns the status, version, and available parameters for each margin engine.
-            operationId: healthcheck
+            summary: Fetch the latest live result for each account
+            description: |
+                Return one summary row per live account visible to the authenticated caller.
+                This is current book state, not the results of a specific batch.
+            operationId: getAccountResults
             tags:
-                - healthcheck
+                - results
             responses:
                 '200':
-                    description: Array of engine status objects
+                    description: Latest live account summaries.
                     content:
                         application/json:
                             schema:
                                 type: array
                                 items:
-                                    $ref: '#/components/schemas/HealthcheckEntry'
+                                    $ref: '#/components/schemas/AccountResult'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+
+    /stress-test/scenarios:
+        get:
+            summary: List stress-test scenarios
+            description: Return the built-in and caller-owned scenarios available to the authenticated caller.
+            operationId: listStressTestScenarios
+            tags:
+                - stress-scenarios
+            responses:
+                '200':
+                    description: Available scenarios.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/StressScenario'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+        post:
+            summary: Create or replace stress-test scenarios
+            description: Create caller-owned scenarios. Supply an existing caller-owned scenario_id to replace it.
+            operationId: createStressTestScenarios
+            tags:
+                - stress-scenarios
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: array
+                            minItems: 1
+                            items:
+                                $ref: '#/components/schemas/StressScenarioInput'
+            responses:
+                '200':
+                    description: IDs of the created or replaced scenarios.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [scenario_ids]
+                                properties:
+                                    scenario_ids:
+                                        type: array
+                                        items:
+                                            type: string
+                                            format: uuid
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+        delete:
+            summary: Delete a stress-test scenario
+            description: Delete one caller-owned scenario. Built-in scenarios are not affected.
+            operationId: deleteStressTestScenario
+            tags:
+                - stress-scenarios
+            parameters:
+                - name: scenario_id
+                  in: query
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+            responses:
+                '200':
+                    description: The deleted scenario ID.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [scenario_id]
+                                properties:
+                                    scenario_id:
+                                        type: string
+                                        format: uuid
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+
+    /validation-reference/exchanges:
+        get:
+            summary: List exchanges
+            description: Return exchange codes enabled for the authenticated caller.
+            operationId: listExchanges
+            tags: [validation-reference]
+            responses:
+                '200':
+                    $ref: '#/components/responses/StringList'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
 
+    /validation-reference/contracts/{exchange_code}:
+        get:
+            summary: List contracts for an exchange
+            operationId: listContracts
+            tags: [validation-reference]
+            parameters:
+                - $ref: '#/components/parameters/ExchangeCode'
+            responses:
+                '200':
+                    $ref: '#/components/responses/StringList'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+
+    /validation-reference/contract-type/{exchange_code}/{contract_code}:
+        get:
+            summary: List contract types
+            description: contract_code may be the bare code or the complete value returned by the contracts endpoint.
+            operationId: listContractTypes
+            tags: [validation-reference]
+            parameters:
+                - $ref: '#/components/parameters/ExchangeCode'
+                - $ref: '#/components/parameters/ContractCode'
+            responses:
+                '200':
+                    $ref: '#/components/responses/StringList'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+
+    /validation-reference/expiries/{exchange_code}/{contract_code}/{contract_type}:
+        get:
+            summary: List contract expiries
+            operationId: listContractExpiries
+            tags: [validation-reference]
+            parameters:
+                - $ref: '#/components/parameters/ExchangeCode'
+                - $ref: '#/components/parameters/ContractCode'
+                - $ref: '#/components/parameters/ContractType'
+            responses:
+                '200':
+                    $ref: '#/components/responses/StringList'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+
+    /validation-reference/strikes/{exchange_code}/{contract_code}/{contract_type}/{expiry}:
+        get:
+            summary: List option strikes
+            operationId: listContractStrikes
+            tags: [validation-reference]
+            parameters:
+                - $ref: '#/components/parameters/ExchangeCode'
+                - $ref: '#/components/parameters/ContractCode'
+                - $ref: '#/components/parameters/ContractType'
+                - name: expiry
+                  in: path
+                  required: true
+                  description: An expiry returned by the expiries endpoint.
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: Available strikes in ascending order.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    type: number
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+
+    /validation-reference/fi-reference:
+        get:
+            summary: Get fixed-income reference values
+            description: Return the licensed currency and bond-category values accepted by fixed-income positions.
+            operationId: getFixedIncomeReference
+            tags: [validation-reference]
+            responses:
+                '200':
+                    $ref: '#/components/responses/ReferenceObject'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+
+    /validation-reference/irs-reference:
+        get:
+            summary: Get cleared-rates reference values
+            description: Return accepted clearing houses, directions, currencies, floating-rate indices, and frequencies.
+            operationId: getIrsReference
+            tags: [validation-reference]
+            responses:
+                '200':
+                    $ref: '#/components/responses/ReferenceObject'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+
+    /validation-reference/ladder-reference:
+        get:
+            summary: Get rates delta-ladder reference values
+            description: Return accepted indices and the CME CORE tenor grid.
+            operationId: getLadderReference
+            tags: [validation-reference]
+            responses:
+                '200':
+                    $ref: '#/components/responses/ReferenceObject'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+
+    /validation-reference/fx-symbols:
+        get:
+            summary: List supported FX currency codes
+            description: Return currency codes that can be combined into an FX pair.
+            operationId: listFxSymbols
+            tags: [validation-reference]
+            responses:
+                '200':
+                    $ref: '#/components/responses/StringList'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+
+    /validation-reference/portfolios:
+        post:
+            summary: Validate a portfolio without calculating it
+            description: Strictly validate and standardise positions. Invalid rows are returned as invalid rather than silently substituted.
+            operationId: validatePortfolio
+            tags: [validation-reference]
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/PortfolioRequest'
+            responses:
+                '200':
+                    description: Standardised positions with validation fields.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    type: object
+                                    additionalProperties: true
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/EventMarketNotLicensed'
+
+    /validation-reference/events/search:
+        get:
+            summary: Search active event markets
+            description: This endpoint is available only when the requested event-market exchange is enabled on the caller's licence.
+            operationId: searchEventMarkets
+            tags: [event-markets]
+            parameters:
+                - $ref: '#/components/parameters/EventExchange'
+                - name: q
+                  in: query
+                  required: false
+                  description: Case-insensitive text or ticker search.
+                  schema:
+                      type: string
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      maximum: 200
+                      default: 30
+            responses:
+                '200':
+                    description: Matching active event markets.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/EventMarketSearchResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/EventMarketNotLicensed'
+
+    /validation-reference/events/contracts:
+        get:
+            summary: List active event-market contracts
+            description: This endpoint is available only when the requested event-market exchange is enabled on the caller's licence.
+            operationId: listEventMarketContracts
+            tags: [event-markets]
+            parameters:
+                - $ref: '#/components/parameters/EventExchange'
+            responses:
+                '200':
+                    description: Up to 200 active event-market contracts.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/EventMarketContractsResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/EventMarketNotLicensed'
+
+    /portfolios/stage:
+        post:
+            summary: Validate and save a portfolio stage
+            description: |
+                Save one tabular loader section for the authenticated caller. For an ETD
+                What-If comparison, each row is ordered as line ID, account code, exchange,
+                contract, type, expiry, strike, net position, and account type.
+            operationId: stagePortfolio
+            tags: [what-if]
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/StagePortfolioRequest'
+            responses:
+                '200':
+                    description: The validated rows saved to the caller's stage.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/StagePortfolioResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+
+    /portfolios/stage/submit:
+        post:
+            summary: Compare a staged portfolio with a stored calculation
+            description: Calculate the caller's current stage synchronously and compare it with one visible baseline portfolio.
+            operationId: submitWhatIf
+            tags: [what-if]
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/WhatIfRequest'
+            responses:
+                '200':
+                    description: Before and after comparison. Fields ending in _1 are baseline values and fields ending in _2 are staged values.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/WhatIfResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '403':
+                    description: The caller cannot view the baseline portfolio.
+                '409':
+                    description: The baseline result is no longer available. Submit it again before comparing.
+
 components:
+    parameters:
+        ExchangeCode:
+            name: exchange_code
+            in: path
+            required: true
+            description: Exchange code returned by the exchanges endpoint.
+            schema:
+                type: string
+        ContractCode:
+            name: contract_code
+            in: path
+            required: true
+            description: Contract code, URL encoded when it contains spaces or punctuation.
+            schema:
+                type: string
+        ContractType:
+            name: contract_type
+            in: path
+            required: true
+            description: Contract type returned by the contract-type endpoint.
+            schema:
+                type: string
+        EventExchange:
+            name: exchange
+            in: query
+            required: false
+            description: Licensed event-market exchange. Defaults to KALSHI.
+            schema:
+                type: string
+                enum: [KALSHI, FORECASTEX]
+                default: KALSHI
+
     schemas:
         PortfolioRequest:
             description: Top-level request payload for portfolio margin calculations.
@@ -908,6 +1321,8 @@ components:
             required:
                 - account_code
                 - currency_pair
+                - contract_type
+                - expiry
                 - amount
             properties:
                 account_code:
@@ -921,9 +1336,11 @@ components:
                 contract_type:
                     description: Contract type.
                     type: string
+                    enum: [FX]
                 expiry:
                     description: Expiry date.
                     type: string
+                    example: '20271231'
                 amount:
                     description: Notional amount (positive = long, negative = short).
                     type: number
@@ -1879,30 +2296,226 @@ components:
                     type: number
                     nullable: true
 
-        HealthcheckEntry:
+        StressScenarioInput:
+            type: object
+            required: [scenario_name, scenario_definition]
+            properties:
+                scenario_id:
+                    description: Omit to create a new scenario. Supply a caller-owned ID to replace it.
+                    type: string
+                    format: uuid
+                scenario_name:
+                    type: string
+                scenario_definition:
+                    $ref: '#/components/schemas/StressScenarioDefinition'
+
+        StressScenario:
+            type: object
+            required: [scenario_id, scenario_name, scenario_definition]
+            properties:
+                scenario_id:
+                    type: string
+                    format: uuid
+                scenario_name:
+                    type: string
+                scenario_definition:
+                    $ref: '#/components/schemas/StressScenarioDefinition'
+                built_in:
+                    description: True when the scenario is supplied by Cumulus9 and cannot be deleted by the caller.
+                    type: boolean
+            additionalProperties: true
+
+        StressScenarioDefinition:
+            description: |
+                Hierarchical shocks. The most specific match wins in this order:
+                expiry, underlying, sub_sector, sector.
             type: object
             properties:
-                service:
+                sector:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/StressShock'
+                sub_sector:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/StressShock'
+                underlying:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/StressShock'
+                expiry:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/StressShock'
+
+        StressShock:
+            type: object
+            properties:
+                override:
+                    type: boolean
+                    default: false
+                underlying:
+                    description: Decimal price shock, for example -0.10 for minus 10 percent.
+                    type: number
+                volatility:
+                    description: Decimal volatility shock, for example 0.20 for plus 20 percent.
+                    type: number
+            additionalProperties: false
+
+        EventMarketContract:
+            type: object
+            required: [ticker, label, event_ticker, status]
+            properties:
+                ticker:
                     type: string
-                    example: span
+                label:
+                    type: string
+                event_ticker:
+                    type: string
                 status:
                     type: string
-                    example: OK
-                version:
+                    example: active
+                expiration_time:
                     type: string
-                    example: '0.0.13'
-                healthcheck:
+                    format: date-time
+                    nullable: true
+                mark_dollars:
+                    type: number
+                    nullable: true
+                mark_source:
+                    type: string
+
+        EventMarketSearchResponse:
+            type: object
+            required: [count, markets]
+            properties:
+                catalog_version:
+                    type: string
+                    nullable: true
+                count:
                     type: integer
-                    example: 1719582349309
-                start_time:
+                markets:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/EventMarketContract'
+
+        EventMarketContractsResponse:
+            type: object
+            required: [count, contracts]
+            properties:
+                parameter_version:
                     type: string
-                    example: '2024-06-28T04:11:01.377Z'
-                parameters:
-                    oneOf:
-                        - type: object
-                          additionalProperties: true
-                        - type: string
-            additionalProperties: true
+                    nullable: true
+                count:
+                    type: integer
+                contracts:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/EventMarketContract'
+
+        StagePortfolioRequest:
+            type: object
+            required: [type, data, idx, errors]
+            properties:
+                type:
+                    description: Loader type. The public What-If example uses etd.
+                    type: string
+                    enum: [etd, fi, fi_by_cusip, fx, crif, irs, ladder, events]
+                data:
+                    description: Tabular loader rows. ETD row order is line ID, account code, exchange, contract, type, expiry, strike, net position, account type.
+                    type: array
+                    items:
+                        type: array
+                        items: {}
+                idx:
+                    description: Zero-based indexes of the submitted rows.
+                    type: array
+                    items:
+                        type: integer
+                errors:
+                    description: Existing loader error coordinates. Use an empty array for a new stage.
+                    type: array
+                    items:
+                        type: array
+                        minItems: 2
+                        maxItems: 2
+                        items:
+                            type: integer
+                vendor_symbology:
+                    type: string
+                    enum: [clearing, ion, gmi, tt_new]
+                    default: clearing
+                cme_symbology:
+                    type: string
+                    enum: [clearing, globex]
+                    default: clearing
+                use_closest_match:
+                    type: boolean
+                    default: false
+                use_closest_active:
+                    type: boolean
+                    default: false
+
+        StagePortfolioResponse:
+            type: object
+            required: [request_id, data, errors]
+            properties:
+                request_id:
+                    type: string
+                    format: uuid
+                data:
+                    type: array
+                    items:
+                        type: array
+                        items: {}
+                errors:
+                    type: array
+                    items:
+                        type: array
+                        items:
+                            type: integer
+
+        WhatIfRequest:
+            type: object
+            required: [action, request_id, portfolio_id]
+            properties:
+                action:
+                    type: string
+                    enum: [what-if]
+                request_id:
+                    description: Request ID of the stored baseline calculation.
+                    type: string
+                    format: uuid
+                portfolio_id:
+                    description: Portfolio ID of the baseline account.
+                    type: string
+                calculation_type:
+                    type: string
+                    default: all
+                risk_free_rate:
+                    type: number
+
+        WhatIfResponse:
+            type: object
+            required: [what_if]
+            properties:
+                what_if:
+                    type: object
+                    required: [summary, margin_by_contract, portfolio]
+                    properties:
+                        summary:
+                            type: object
+                            additionalProperties: true
+                        margin_by_contract:
+                            type: array
+                            items:
+                                type: object
+                                additionalProperties: true
+                        portfolio:
+                            type: array
+                            items:
+                                type: object
+                                additionalProperties: true
 
         BadRequestError:
             type: object
@@ -1966,6 +2579,36 @@ components:
                 application/json:
                     schema:
                         $ref: '#/components/schemas/InternalServerError'
+        StringList:
+            description: A list of available values.
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            type: string
+        ReferenceObject:
+            description: Reference values accepted by this position type.
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        additionalProperties: true
+        EventMarketNotLicensed:
+            description: Event markets are not enabled on the caller's licence.
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            error:
+                                type: object
+                                properties:
+                                    code:
+                                        type: string
+                                        example: EVENT_MARKET_NOT_LICENSED
+                                    message:
+                                        type: string
 
     securitySchemes:
         bearerAuth:
