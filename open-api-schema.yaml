@@ -38,7 +38,8 @@ paths:
             description: |
                 Submit a multi-account, multi-exchange portfolio and receive margin requirements,
                 analytics, and SIMM calculations synchronously.
-                Supports ETD, Fixed Income, FX, Fixed Income by CUSIP, and CRIF position types.
+                Supports ETD, Fixed Income, FX, Fixed Income by CUSIP, CRIF, event,
+                cleared IRS, and rates delta-ladder position types.
             operationId: calculateMargin
             tags:
                 - portfolios
@@ -111,6 +112,61 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '429':
+                    $ref: '#/components/responses/RateLimited'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+
+    /portfolios/optimize:
+        post:
+            summary: Optimize CME rates cross margin
+            description: |
+                Compare listed and cleared-rates margin allocations and return the lowest-margin
+                allocation found. Use the standard portfolio request with trade-level cleared IRS
+                positions or a rates delta ladder. At least one eligible CME listed-rates future
+                must set `cross_margin` to `true`. The cmerates engine must be enabled on the
+                client's licence.
+            operationId: optimizeCmeRatesCrossMargin
+            tags:
+                - portfolios
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/PortfolioRequest'
+            responses:
+                '200':
+                    description: Cross-margin optimization completed.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/OptimizerResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '403':
+                    description: The cmerates engine is not enabled on this licence.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: true
+                '413':
+                    description: The request exceeds the maximum payload size.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: true
+                '422':
+                    description: An account exceeds its position limit.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: true
                 '429':
                     $ref: '#/components/responses/RateLimited'
                 '500':
@@ -407,7 +463,7 @@ components:
                 stress_sensitivities:
                     $ref: '#/components/schemas/StressSensitivities'
                 portfolio:
-                    description: Array of position objects. Supports ETD, Fixed Income, FX, FI by CUSIP, and CRIF formats.
+                    description: Array of supported ETD, Fixed Income, FX, FI by CUSIP, CRIF, event, cleared IRS, and rates delta-ladder positions.
                     type: array
                     items:
                         oneOf:
@@ -416,6 +472,9 @@ components:
                             - $ref: '#/components/schemas/FXPosition'
                             - $ref: '#/components/schemas/CUSIPPosition'
                             - $ref: '#/components/schemas/CRIFPosition'
+                            - $ref: '#/components/schemas/EventMarketPosition'
+                            - $ref: '#/components/schemas/IRSPosition'
+                            - $ref: '#/components/schemas/DeltaLadderPosition'
             additionalProperties: true
 
         RiskMetrics:
@@ -538,7 +597,6 @@ components:
                 - exchange_code
                 - contract_code
                 - contract_type
-                - contract_expiry
                 - net_position
             properties:
                 account_code:
@@ -581,11 +639,24 @@ components:
                         - type: number
                     example: '1000'
                 account_type:
-                    description: Margin account classification.
+                    description: Margin account classification. At OCC, REGT selects strategy-based Reg T and C selects customer TIMS portfolio margin.
                     type: string
-                    enum: [H, S, M, HRP, NHRP, C]
+                    enum: [H, S, M, HRP, NHRP, C, REGT]
                     default: H
                     example: H
+                cross_margin:
+                    description: Elect an eligible CME listed-rates future for cross-margin optimization.
+                    type: boolean
+                cross_margin_dv01:
+                    description: Optional per-lot DV01 override used by the optimizer.
+                    oneOf:
+                        - type: string
+                        - type: number
+                cross_margin_tenor:
+                    description: Optional cleared-rates tenor override used by the optimizer.
+                    oneOf:
+                        - type: string
+                        - type: number
                 omnibus_ind:
                     description: Omnibus indicator.
                     type: string
@@ -651,7 +722,7 @@ components:
                     type: string
                     example: USD
                 contract_type:
-                    description: Typically `BOND`.
+                    description: Typically `BOND`. Use `UST` for FICC-eligible USD Treasuries.
                     type: string
                     example: BOND
                 maturity:
@@ -676,6 +747,155 @@ components:
                         - type: string
                         - type: number
                     example: 1000000
+            additionalProperties: true
+
+        EventMarketPosition:
+            description: Binary event-market position.
+            type: object
+            required:
+                - account_code
+                - ticker
+            allOf:
+                - anyOf:
+                    - type: object
+                      required:
+                          - market_type
+                      properties:
+                          market_type:
+                              type: string
+                    - type: object
+                      required:
+                          - exchange_code
+                      properties:
+                          exchange_code:
+                              type: string
+                - anyOf:
+                    - type: object
+                      required:
+                          - side
+                          - quantity
+                      properties:
+                          side:
+                              type: string
+                          quantity:
+                              type: number
+                    - type: object
+                      required:
+                          - net_position
+                      properties:
+                          net_position:
+                              type: number
+            properties:
+                account_code:
+                    type: string
+                    example: EVENT_ACCOUNT
+                market_type:
+                    description: Set this to EVENT when exchange_code is omitted. At least one venue signal is required.
+                    type: string
+                    enum: [EVENT]
+                    example: EVENT
+                exchange_code:
+                    description: Event exchange. At least one of exchange_code or market_type is required.
+                    type: string
+                    enum: [KALSHI, FORECASTEX]
+                    example: KALSHI
+                ticker:
+                    description: Exchange event ticker.
+                    type: string
+                side:
+                    description: Contract side when quantity is used.
+                    type: string
+                    enum: [YES, NO]
+                quantity:
+                    description: Contract quantity used with side. At least one of quantity or net_position is required.
+                    type: number
+                net_position:
+                    description: Signed contracts, positive for yes and negative for no. At least one of net_position or quantity is required.
+                    type: number
+                price_dollars:
+                    description: Optional event mark in dollars between 0 and 1.
+                    type: number
+                    minimum: 0
+                    maximum: 1
+                netting_enabled:
+                    type: boolean
+                currency_code:
+                    type: string
+                    example: USD
+            additionalProperties: true
+
+        IRSPosition:
+            description: Trade-level cleared interest-rate swap.
+            type: object
+            required:
+                - account_code
+                - clearing_house
+                - direction
+                - notional
+                - effective_date
+                - maturity_date
+                - fixed_rate
+                - float_index
+            properties:
+                account_code:
+                    type: string
+                    example: CME_RATES_IRS
+                clearing_house:
+                    type: string
+                    example: CME
+                trade_id:
+                    type: string
+                type:
+                    type: string
+                    enum: [VANILLA, OIS, ZERO_COUPON, BASIS, FRA]
+                direction:
+                    type: string
+                    enum: [PAY, RECEIVE]
+                notional:
+                    type: number
+                currency:
+                    type: string
+                    example: USD
+                effective_date:
+                    description: Effective date in YYYYMMDD format.
+                    type: string
+                maturity_date:
+                    description: Maturity date in YYYYMMDD format.
+                    type: string
+                fixed_rate:
+                    description: Fixed rate as a percentage, for example 3.5 for 3.5 percent.
+                    type: number
+                float_index:
+                    type: string
+                    example: USD-SOFR-COMPOUND
+                pay_frequency:
+                    type: string
+                    example: 6M
+            additionalProperties: true
+
+        DeltaLadderPosition:
+            description: Signed cleared-rates DV01 exposure for one curve and tenor bucket.
+            type: object
+            required:
+                - account_code
+                - index
+                - tenor
+                - dv01
+            properties:
+                account_code:
+                    type: string
+                    example: CME_RATES_LADDER
+                index:
+                    type: string
+                    example: USD_SOFR_1D_ERS
+                tenor:
+                    description: Bucket tenor as a day count.
+                    type: string
+                    example: 1826D
+                dv01:
+                    description: Signed currency amount per basis point.
+                    type: number
+                    example: 78000
             additionalProperties: true
 
         FXPosition:
@@ -802,6 +1022,98 @@ components:
                     type: string
                     example: 'NONREG,CFTC,ESA'
             additionalProperties: true
+
+        OptimizerResponse:
+            type: object
+            properties:
+                request_id:
+                    type: string
+                data:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/OptimizerReport'
+
+        OptimizerReport:
+            type: object
+            properties:
+                account_code:
+                    type: string
+                price_date:
+                    type: integer
+                currency_code:
+                    type: string
+                baseline:
+                    $ref: '#/components/schemas/OptimizerTotals'
+                all_candidates_to_seq:
+                    $ref: '#/components/schemas/OptimizerTotals'
+                optimized:
+                    $ref: '#/components/schemas/OptimizerTotals'
+                legs:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            position_id:
+                                type: string
+                            contract:
+                                type: string
+                            contract_code:
+                                type: string
+                            expiry:
+                                type: string
+                            net_position:
+                                type: number
+                            tenor:
+                                type: string
+                            ladder_dv01:
+                                type: number
+                            span_allocated:
+                                type: number
+                            fraction_to_seq:
+                                type: number
+                            lots_to_seq:
+                                type: number
+                            lots_left_in_seg:
+                                type: number
+                            recommendation:
+                                type: string
+                candidates:
+                    type: integer
+                moved:
+                    type: integer
+                exceptions:
+                    type: array
+                    items:
+                        type: object
+                        additionalProperties: true
+                net_ladder:
+                    type: array
+                    items:
+                        type: object
+                        additionalProperties: true
+                parameters:
+                    type: array
+                    items:
+                        type: object
+                        additionalProperties: true
+
+        OptimizerTotals:
+            type: object
+            properties:
+                seg_span:
+                    description: Margin remaining in the listed model.
+                    type: number
+                seq_hvar:
+                    description: Cleared-rates historical VaR margin.
+                    type: number
+                total:
+                    type: number
+                saving:
+                    description: Saving relative to baseline when applicable.
+                    type: number
+                saving_pct:
+                    description: Percentage saving relative to baseline when applicable.
+                    type: number
 
         AccountResult:
             description: Margin results and drill-down for a single account.
@@ -1090,6 +1402,30 @@ components:
                     items:
                         type: object
                         additionalProperties: true
+                margin_by_cmerates:
+                    description: CME cleared-rates margin, engine detail, and net ladder.
+                    type: array
+                    nullable: true
+                    items:
+                        type: object
+                        additionalProperties: true
+                margin_by_events:
+                    description: Event-market margin by event contract.
+                    type: array
+                    nullable: true
+                    items:
+                        type: object
+                        additionalProperties: true
+                event_risk:
+                    description: Event VaR, expected shortfall, stress, scenarios, probability shocks, and coverage.
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                risk_components:
+                    description: Reconciliation of event and conventional risk components.
+                    type: object
+                    nullable: true
+                    additionalProperties: true
                 pnl_vector:
                     type: array
                     nullable: true

@@ -24,6 +24,7 @@ API keys use the `sk-...` prefix format. To obtain credentials (`C9_API_ENDPOINT
 | Method | Path                            | Description                                                 |
 | ------ | ------------------------------- | ----------------------------------------------------------- |
 | `POST` | `/portfolios`                   | Submit a portfolio and receive margin results synchronously |
+| `POST` | `/portfolios/optimize`          | Optimize eligible CME rates futures between listed and cleared-rates margin |
 | `POST` | `/portfolios/batch`             | Submit a large portfolio for background processing          |
 | `GET`  | `/portfolios/batch/:batch_id`   | Poll batch job status and progress                          |
 | `GET`  | `/portfolios/batch/:batch_id/results` | Every account the batch calculated, in one call       |
@@ -107,6 +108,24 @@ Used when `calculation_type` includes `"analytics"`. Defines stress scenarios ap
 | `std_dev_lookback`     | `integer`  | `2500`                                         | Lookback period for standard deviation calculation                   |
 | `std_dev_mpor`         | `integer`  | `1`                                            | Margin period of risk for standard deviation scaling                 |
 | `generate_full_report` | `boolean`  | `false`                                        | Generate a full stress test report                                   |
+
+---
+
+## POST `/portfolios/optimize`
+
+Run CME rates cross-margin optimization for one or more accounts. The request uses the same shape as `POST /portfolios`, but at least one eligible CME listed-rates future must include `"cross_margin": true`. Cleared-rates exposure can be supplied as trade-level IRS positions or as a signed DV01 ladder. The cmerates engine must be enabled on the client's licence.
+
+The response reports three comparable totals for each account:
+
+| Field | Description |
+| ----- | ----------- |
+| `baseline` | Listed futures remain in the listed margin model |
+| `all_candidates_to_seq` | Every eligible future is allocated to cleared rates |
+| `optimized` | Lowest-margin allocation found by the optimizer |
+| `legs` | Per-future recommended allocation, including lots moved and lots left in listed margin |
+| `net_ladder` | Net cleared-rates ladder used in the calculation |
+
+Each total contains `seg_span`, `seq_hvar`, and `total`. The candidate and optimized totals also contain `saving` and `saving_pct` relative to baseline. See [the trade-level IRS example](python/12_cme_etd_cleared_rates_optimization.py) and [the delta-ladder example](python/13_cme_delta_ladder_optimization.py).
 
 ---
 
@@ -260,7 +279,7 @@ A `request_id` supplied in the request body is honoured by `POST /portfolios` bu
 
 ## Position Types
 
-The `portfolio` array supports five position types. You can mix different types within a single request across multiple accounts.
+The `portfolio` array supports eight position types. You can mix different types within a single request across multiple accounts.
 
 ### Exchange-Traded Derivatives (ETD)
 
@@ -289,6 +308,9 @@ Standard listed futures and options.
 | `avg_buy`          | `string\|number` | —        | Average buy price                                                                            |
 | `avg_sell`         | `string\|number` | —        | Average sell price                                                                           |
 | `itd_volume`       | `string\|number` | —        | Intraday traded volume                                                                       |
+| `cross_margin`     | `boolean`        | no       | Elect an eligible CME listed-rates future for `/portfolios/optimize`                          |
+| `cross_margin_dv01`| `string\|number` | no       | Optional per-lot DV01 override for optimization                                               |
+| `cross_margin_tenor` | `string\|number` | no     | Optional cleared-rates tenor override                                                         |
 
 ```json
 {
@@ -310,7 +332,7 @@ Cash bond positions for analytics and margin calculations.
 | ------------------ | ---------------- | -------- | ---------------------------------------------------- |
 | `account_code`     | `string`         | yes      | Internal account identifier                          |
 | `currency`         | `string`         | —        | Bond currency (ISO 4217)                             |
-| `contract_type`    | `string`         | —        | Typically `"BOND"`                                   |
+| `contract_type`    | `string`         | no       | Typically `"BOND"`. Use `"UST"` for FICC-eligible USD Treasuries |
 | `maturity`         | `string`         | yes      | Maturity date in `YYYYMMDD` format                   |
 | `coupon_rate`      | `string\|number` | —        | Annual coupon rate as a percentage (e.g. `6` for 6%) |
 | `coupon_frequency` | `string\|number` | —        | Coupon payments per year (e.g. `2` for semi-annual)  |
@@ -327,6 +349,53 @@ Cash bond positions for analytics and margin calculations.
     "notional": 1000000
 }
 ```
+
+### Event Markets
+
+Binary event contracts from supported event exchanges. Use `side` and `quantity`, or provide a signed `net_position`. Event margin and analytics are returned together when `calculation_type` includes `margins`.
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `account_code` | `string` | yes | Internal account identifier |
+| `market_type` | `string` | one venue signal | `"EVENT"` |
+| `exchange_code` | `string` | one venue signal | `"KALSHI"` or `"FORECASTEX"` |
+| `ticker` | `string` | yes | Exchange event ticker |
+| `side` | `string` | with `quantity` | `"YES"` or `"NO"` |
+| `quantity` | `number` | with `side` | Number of contracts |
+| `net_position` | `number` | alternative | Signed contracts, positive for yes and negative for no |
+| `price_dollars` | `number` | no | Optional mark between 0 and 1 dollars |
+| `netting_enabled` | `boolean` | no | Enable supported event netting |
+| `currency_code` | `string` | no | Result currency, normally `"USD"` |
+
+### Cleared Interest Rate Swaps
+
+Trade-level cleared swaps used by the CME cleared-rates margin model.
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `account_code` | `string` | yes | Internal account identifier |
+| `clearing_house` | `string` | yes | Clearing house, for example `"CME"` |
+| `trade_id` | `string` | no | External trade identifier |
+| `type` | `string` | no | `"VANILLA"`, `"OIS"`, `"ZERO_COUPON"`, `"BASIS"`, or `"FRA"` |
+| `direction` | `string` | yes | `"PAY"` or `"RECEIVE"` fixed |
+| `notional` | `number` | yes | Trade notional |
+| `currency` | `string` | no | Trade currency, normally `"USD"` |
+| `effective_date` | `string` | yes | Effective date in `YYYYMMDD` format |
+| `maturity_date` | `string` | yes | Maturity date in `YYYYMMDD` format |
+| `fixed_rate` | `number` | yes | Fixed rate as a percentage, for example `3.5` for 3.5 percent |
+| `float_index` | `string` | yes | Floating index, for example `"USD-SOFR-COMPOUND"` |
+| `pay_frequency` | `string` | no | Fixed payment frequency, for example `"6M"` |
+
+### Rates Delta Ladder
+
+A cleared-rates exposure supplied directly as signed DV01 buckets instead of trade-level swaps.
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `account_code` | `string` | yes | Internal account identifier |
+| `index` | `string` | yes | Curve index, for example `"USD_SOFR_1D_ERS"` |
+| `tenor` | `string` | yes | Bucket tenor as a day count, for example `"1826D"` |
+| `dv01` | `number` | yes | Signed currency amount per basis point |
 
 ### FX Positions
 
@@ -406,6 +475,15 @@ Positions formatted according to ISDA's Common Risk Interchange Format for SIMM 
 ---
 
 ## Account Types
+
+### OCC Accounts
+
+| Code | Description |
+| ---- | ----------- |
+| `REGT` | Strategy-based Reg T margin. Recognised strategies receive fixed formulas and requirements are added together |
+| `C` | Customer portfolio margin using risk-based TIMS scenarios and portfolio offsets |
+
+Reg T and TIMS are mutually exclusive within an account. To compare them consistently, submit the same OCC cash and options book under two account codes, as shown in [the Python comparison](python/09_reg_t_vs_portfolio_margin.py). Account eligibility and any broker house requirement remain outside the calculation request.
 
 ### SPAN, SPAN2, and IRM Exchanges
 
@@ -512,6 +590,10 @@ Each element in the `data` array contains:
 | `margin_by_dce`                | `array`   | DCE margin drill-down                                             |
 | `margin_by_shfe`               | `array`   | SHFE margin drill-down                                            |
 | `margin_by_zce`                | `array`   | ZCE margin drill-down                                             |
+| `margin_by_cmerates`           | `array`   | CME cleared-rates margin and net-ladder detail                    |
+| `margin_by_events`             | `array`   | Event-market margin by event contract                             |
+| `event_risk`                   | `object`  | Event VaR, expected shortfall, stress, scenarios, probability shocks, and coverage |
+| `risk_components`              | `object`  | Reconciliation of event and conventional risk components          |
 | `pnl_vector`                   | `array`   | Historical P&L vector (when `pnl_details` is `true`)              |
 | `pnl_vector_pct`               | `array`   | Historical P&L vector as percentages                              |
 | `scenario_analysis`            | `object`  | Scenario analysis results                                         |
@@ -842,11 +924,27 @@ See the language-specific directories for complete runnable examples:
 
 | Directory     | Examples                                                                                            |
 | ------------- | --------------------------------------------------------------------------------------------------- |
-| `python/`     | Basic margin, margin ageing, batch processing, healthcheck, SIMM impact analysis, multi-asset-class |
+| `python/`     | Basic margin, ageing, batch, healthcheck, SIMM, stress, Reg T vs TIMS, event risk, fixed income and FICC, CME rates optimization |
 | `javascript/` | Basic margin, batch processing                                                                      |
 | `curl/`       | Basic margin, batch processing                                                                      |
 | `csharp/`     | Basic margin                                                                                        |
 | `r/`          | Basic margin                                                                                        |
+
+The focused Python analytics examples are:
+
+| File | Demonstrates |
+| ---- | ------------ |
+| [`09_reg_t_vs_portfolio_margin.py`](python/09_reg_t_vs_portfolio_margin.py) | Identical OCC cash and options books under Reg T and TIMS |
+| [`10_event_market_analytics.py`](python/10_event_market_analytics.py) | Event margin, VaR, expected shortfall, settlement stress, scenarios, and probability shocks |
+| [`11_fixed_income_analytics_and_ficc.py`](python/11_fixed_income_analytics_and_ficc.py) | Treasury VaR, DV01, sensitivity stress, configured stress tests, and FICC margin |
+| [`12_cme_etd_cleared_rates_optimization.py`](python/12_cme_etd_cleared_rates_optimization.py) | CME listed rates plus trade-level cleared swaps, margin and optimization |
+| [`13_cme_delta_ladder_optimization.py`](python/13_cme_delta_ladder_optimization.py) | CME listed rates plus a DV01 ladder, margin and optimization |
+
+Replace the `C9_API_ENDPOINT` and `C9_API_SECRET` placeholders at the top of an example, then run it directly:
+
+```bash
+python3 python/09_reg_t_vs_portfolio_margin.py
+```
 
 ---
 
