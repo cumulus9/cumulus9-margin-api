@@ -171,7 +171,7 @@ event = {
     "use_closest_active": True,
     "stress_test_enabled": True,
     "stress_test_details_enabled": True,
-    "free_risk_rate": 0.05,  # Explicit portfolio-wide override; omit to use validated ETD curve rates.
+    "risk_free_rate": 0.05,  # Explicit portfolio-wide override; omit to use validated ETD curve rates.
 }
 
 response = post("/portfolios", event)
@@ -186,7 +186,7 @@ print("Portfolio response status:", response.status_code)
 #   account_code, position_id, exch_acronym, contract_code, contract_type,
 #   expiry, strike, net_position,
 #   scenario_name, shock_type, underlying_price, volatility,
-#   days_to_maturity, free_risk_rate, underlying_shock, volatility_shock,
+#   days_to_maturity, risk_free_rate, underlying_shock, volatility_shock,
 #   price_revalued, price_stressed, stress_loss
 #
 # Data sources per account in the response:
@@ -204,7 +204,7 @@ DETAIL_COLS = [
     "underlying_price",
     "volatility",
     "days_to_maturity",
-    "free_risk_rate",
+    "risk_free_rate",
     "underlying_shock",
     "volatility_shock",
     "price_revalued",
@@ -226,7 +226,7 @@ FINAL_COLS = [
     "underlying_price",
     "volatility",
     "days_to_maturity",
-    "free_risk_rate",
+    "risk_free_rate",
     "underlying_shock",
     "volatility_shock",
     "price_revalued",
@@ -294,7 +294,7 @@ print(tabulate(df, headers="keys", tablefmt="grid", showindex=False, floatfmt=".
 
 # Detailed stress test results by scenario, account, and position:
 # +--------------------------------------+----------------+---------------+----------------+-----------------------------+-----------------+----------+-------------+----------------+--------------+--------------------+--------------+--------------------+------------------+--------------------+--------------------+------------------+------------------+-----------------+
-# | scenario_name                        | account_code   |   position_id | exch_acronym   | contract_code               | contract_type   |   expiry |      strike |   net_position | shock_type   |   underlying_price |   volatility |   days_to_maturity |   free_risk_rate |   underlying_shock |   volatility_shock |   price_revalued |   price_stressed |     stress_loss |
+# | scenario_name                        | account_code   |   position_id | exch_acronym   | contract_code               | contract_type   |   expiry |      strike |   net_position | shock_type   |   underlying_price |   volatility |   days_to_maturity |   risk_free_rate |   underlying_shock |   volatility_shock |   price_revalued |   price_stressed |     stress_loss |
 # +======================================+================+===============+================+=============================+=================+==========+=============+================+==============+====================+==============+====================+==================+====================+====================+==================+==================+=================+
 # | Broad risk-off (sector)              | Account 1      |             0 | CME            | ES - E-mini S&P 500 Options | CALL            |   203012 | 7000.000000 |           1000 |              |        8287.250000 |     0.197774 |               1220 |         0.050000 |          -0.100000 |           0.200000 |      1611.529734 |      1799.180581 |  9382542.336585 |
 # +--------------------------------------+----------------+---------------+----------------+-----------------------------+-----------------+----------+-------------+----------------+--------------+--------------------+--------------+--------------------+------------------+--------------------+--------------------+------------------+------------------+-----------------+
