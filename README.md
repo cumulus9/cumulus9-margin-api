@@ -113,7 +113,7 @@ Used when `calculation_type` includes `"analytics"`. Defines stress scenarios ap
 
 ## POST `/portfolios/optimize`
 
-Run CME rates cross-margin optimization for one or more accounts. The request uses the same shape as `POST /portfolios`, but at least one eligible CME listed-rates future must include `"cross_margin": true`. Cleared-rates exposure can be supplied as trade-level IRS positions or as a signed DV01 ladder.
+Run CME rates cross-margin optimization for one or more accounts. The request uses the same shape as `POST /portfolios`, but at least one eligible CME listed-rates future must include `"cross_margin": true`. Cleared-rates exposure can be supplied as trade-level IRS positions or as a signed DV01 ladder. The cmerates engine must be enabled on the client's licence.
 
 The response reports three comparable totals for each account:
 

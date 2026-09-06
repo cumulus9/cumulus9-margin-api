@@ -124,7 +124,8 @@ paths:
                 Compare listed and cleared-rates margin allocations and return the lowest-margin
                 allocation found. Use the standard portfolio request with trade-level cleared IRS
                 positions or a rates delta ladder. At least one eligible CME listed-rates future
-                must set `cross_margin` to `true`.
+                must set `cross_margin` to `true`. The cmerates engine must be enabled on the
+                client's licence.
             operationId: optimizeCmeRatesCrossMargin
             tags:
                 - portfolios
@@ -145,6 +146,27 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    description: The cmerates engine is not enabled on this licence.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: true
+                '413':
+                    description: The request exceeds the maximum payload size.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: true
+                '422':
+                    description: An account exceeds its position limit.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: true
                 '429':
                     $ref: '#/components/responses/RateLimited'
                 '500':
@@ -635,11 +657,6 @@ components:
                     oneOf:
                         - type: string
                         - type: number
-                cross_margin_span:
-                    description: Optional listed-margin amount override used for an elected position.
-                    oneOf:
-                        - type: string
-                        - type: number
                 omnibus_ind:
                     description: Omnibus indicator.
                     type: string
@@ -738,6 +755,36 @@ components:
             required:
                 - account_code
                 - ticker
+            allOf:
+                - anyOf:
+                    - type: object
+                      required:
+                          - market_type
+                      properties:
+                          market_type:
+                              type: string
+                    - type: object
+                      required:
+                          - exchange_code
+                      properties:
+                          exchange_code:
+                              type: string
+                - anyOf:
+                    - type: object
+                      required:
+                          - side
+                          - quantity
+                      properties:
+                          side:
+                              type: string
+                          quantity:
+                              type: number
+                    - type: object
+                      required:
+                          - net_position
+                      properties:
+                          net_position:
+                              type: number
             properties:
                 account_code:
                     type: string

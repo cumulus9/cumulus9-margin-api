@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import io
 import pathlib
 import runpy
@@ -24,7 +25,7 @@ def run_example(filename, replies):
     calls = []
 
     def fake_post(url, **kwargs):
-        calls.append((url, kwargs["json"]))
+        calls.append((url, copy.deepcopy(kwargs["json"])))
         return FakeResponse(replies[len(calls) - 1])
 
     output = io.StringIO()
@@ -119,11 +120,13 @@ class AnalyticsExamplesTest(unittest.TestCase):
             }],
         }]}
         calls, output = run_example("12_cme_etd_cleared_rates_optimization.py", [margin, optimization])
-        positions = calls[0][1]["portfolio"]
+        margin_positions = calls[0][1]["portfolio"]
+        optimizer_positions = calls[1][1]["portfolio"]
 
         self.assertEqual([url.rsplit("/", 1)[-1] for url, _ in calls], ["portfolios", "optimize"])
-        self.assertTrue(any("clearing_house" in row for row in positions))
-        self.assertTrue(any(row.get("cross_margin") is True for row in positions))
+        self.assertTrue(any("clearing_house" in row for row in margin_positions))
+        self.assertFalse(any(row.get("cross_margin") is True for row in margin_positions))
+        self.assertTrue(any(row.get("cross_margin") is True for row in optimizer_positions))
         self.assertIn("Combined initial margin: $750,000.00", output)
         self.assertIn("Optimized total: $610,000.00", output)
 
@@ -140,11 +143,14 @@ class AnalyticsExamplesTest(unittest.TestCase):
             }],
         }]}
         calls, output = run_example("13_cme_delta_ladder_optimization.py", [margin, optimization])
-        positions = calls[0][1]["portfolio"]
+        margin_positions = calls[0][1]["portfolio"]
+        optimizer_positions = calls[1][1]["portfolio"]
 
         self.assertEqual([url.rsplit("/", 1)[-1] for url, _ in calls], ["portfolios", "optimize"])
-        self.assertGreaterEqual(sum("index" in row and "dv01" in row for row in positions), 2)
-        self.assertFalse(any("clearing_house" in row for row in positions))
+        self.assertGreaterEqual(sum("index" in row and "dv01" in row for row in margin_positions), 2)
+        self.assertFalse(any("clearing_house" in row for row in margin_positions))
+        self.assertFalse(any(row.get("cross_margin") is True for row in margin_positions))
+        self.assertTrue(any(row.get("cross_margin") is True for row in optimizer_positions))
         self.assertIn("Combined initial margin: $690,000.00", output)
         self.assertIn("Optimized total: $540,000.00", output)
 

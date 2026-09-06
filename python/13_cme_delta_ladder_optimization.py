@@ -25,7 +25,6 @@ payload = {
             "contract_expiry": "202703",
             "net_position": 250,
             "account_type": "H",
-            "cross_margin": True,
         },
         {
             "account_code": "CME_RATES_LADDER",
@@ -56,6 +55,7 @@ results = response.json()
 print(f"Combined initial margin: ${results['data'][0]['initial_margin']:,.2f}")
 
 # Find the best allocation between listed and cleared-rates margin.
+payload["portfolio"][0]["cross_margin"] = True
 response = requests.post(f"{C9_API_ENDPOINT}/portfolios/optimize", headers=HEADERS, json=payload)
 response.raise_for_status()
 optimization = response.json()["data"][0]
@@ -73,7 +73,7 @@ for leg in optimization["legs"]:
 
 # Example staging output on 6 September 2026:
 #
-# Combined initial margin: $2,802,109.97
+# Combined initial margin: $2,963,424.10
 # Baseline total: $2,963,424.10
 # Optimized total: $2,802,109.97
 # Saving: $161,314.13
