@@ -57,6 +57,7 @@ def calculate_total_margin(df: pd.DataFrame) -> float:
     """Submit a portfolio DataFrame and return the total initial margin across all accounts."""
     payload = {
         "vendor_symbology": "clearing",
+        "currency_code": "USD",  # Explicit currency for the USD comparison below.
         "calculation_type": "margins",
         "in_memory": True,
         "portfolio": json.loads(df.to_json(orient="records")),

@@ -6,6 +6,12 @@ info:
         The Cumulus9 Margin API calculates initial margin requirements across all major clearing houses.
         Supports SPAN, SPAN2, PRISMA, TIMS, NODAL VaR, IRM 2.0, JPX VaR, KRX, B3 Core, and ISDA SIMM.
 
+        ## Reporting currency availability
+        Environment-default reporting currency and currency_version 1 are staging-only.
+        They have not been released to the public production API. Production responses
+        may omit reporting_fxrate and currency_version; older P&L/detail fields can
+        retain USD or native units even when headline totals state another currency.
+
         ## Authentication
         Use your API key (`sk-...` prefix) as a Bearer token in the `Authorization` header for all requests.
 
@@ -800,11 +806,13 @@ components:
                     default: clearing
                     example: clearing
                 currency_code:
-                    description: Base currency for aggregated multi-currency results (ISO 4217).
+                    description: >-
+                        Reporting currency for aggregated results (ISO 4217). In staging,
+                        omission uses the client's General Currency setting; an explicit
+                        value overrides it. Public production currently defaults to USD.
                     type: string
                     enum: [USD, EUR, GBP, JPY, CHF, AUD, CAD, BRL, CNH, HKD, INR, NZD]
-                    default: USD
-                    example: USD
+                    example: GBP
                 use_closest_match:
                     description: Auto-correct minor errors in expiry or strike by matching to the nearest valid contract.
                     type: boolean
@@ -1460,6 +1468,14 @@ components:
         OptimizerReport:
             type: object
             properties:
+                reporting_fxrate:
+                    description: Staging only. Reporting-currency units per USD.
+                    type: number
+                    nullable: true
+                currency_version:
+                    description: Staging only. Version 1 identifies normalized monetary values.
+                    type: integer
+                    enum: [1]
                 account_code:
                     type: string
                 price_date:
@@ -1565,8 +1581,18 @@ components:
                     type: integer
                     example: 20250107
                 currency_code:
+                    description: Reporting currency for normalized monetary fields.
                     type: string
-                    example: USD
+                    example: GBP
+                reporting_fxrate:
+                    description: Staging only. Reporting-currency units per USD; native row fxrate remains native units per USD.
+                    type: number
+                    nullable: true
+                    example: 0.8
+                currency_version:
+                    description: Staging only. Version 1 identifies normalized monetary analytics and P&L; absent on legacy responses.
+                    type: integer
+                    enum: [1]
                 initial_margin:
                     description: Total initial margin requirement.
                     type: number
@@ -1891,6 +1917,22 @@ components:
         MarginByCCP:
             type: object
             properties:
+                reporting_currency_code:
+                    description: Staging only. Currency of the additive reporting amounts.
+                    type: string
+                    example: GBP
+                reporting_fxrate:
+                    description: Staging only. Native-currency units per reporting-currency unit, unlike the top-level rate.
+                    type: number
+                    nullable: true
+                reporting_initial_margin:
+                    description: Staging only. Initial margin converted into reporting_currency_code.
+                    type: number
+                    nullable: true
+                reporting_option_liquidation_value:
+                    description: Staging only. Option liquidation value converted into reporting_currency_code.
+                    type: number
+                    nullable: true
                 venue_group_code:
                     description: >-
                         Venue group the margin was charged for (e.g. "CBOT", "NYMEX", "ICE.EU").
@@ -1908,8 +1950,9 @@ components:
                     example: USD
                 fxrate:
                     description: >-
-                        FX rate used for USD conversion. Null means the rate is unavailable and
-                        this row contributes zero to converted aggregates.
+                        Native-currency units per USD. Convert a native amount into the
+                        staging result currency with amount / fxrate * result.reporting_fxrate.
+                        Null means the rate is unavailable; do not relabel native amounts.
                     type: number
                     nullable: true
                     example: 1.0
@@ -1941,6 +1984,22 @@ components:
         MarginByContract:
             type: object
             properties:
+                reporting_currency_code:
+                    description: Staging only. Currency of the additive reporting amounts.
+                    type: string
+                    example: GBP
+                reporting_fxrate:
+                    description: Staging only. Native-currency units per reporting-currency unit, unlike the top-level rate.
+                    type: number
+                    nullable: true
+                reporting_initial_margin:
+                    description: Staging only. Initial margin converted into reporting_currency_code.
+                    type: number
+                    nullable: true
+                reporting_option_liquidation_value:
+                    description: Staging only. Option liquidation value converted into reporting_currency_code.
+                    type: number
+                    nullable: true
                 venue_group_code:
                     description: >-
                         Venue group the margin was charged for (e.g. "CBOT", "NYMEX", "ICE.EU").
@@ -1973,8 +2032,9 @@ components:
                     example: USD
                 fxrate:
                     description: >-
-                        FX rate used for USD conversion. Null means the rate is unavailable and
-                        this row contributes zero to converted aggregates.
+                        Native-currency units per USD. Convert a native amount into the
+                        staging result currency with amount / fxrate * result.reporting_fxrate.
+                        Null means the rate is unavailable; do not relabel native amounts.
                     type: number
                     nullable: true
                     example: 1.0
@@ -2240,6 +2300,18 @@ components:
             description: One account's figures from a batch.
             type: object
             properties:
+                reporting_fxrate:
+                    description: Staging only. Reporting-currency units per USD.
+                    type: number
+                    nullable: true
+                currency_version:
+                    description: Staging only. Version 1 identifies normalized monetary values.
+                    type: integer
+                    enum: [1]
+                currency_code:
+                    description: Reporting currency for this account's totals. May be absent on legacy production responses.
+                    type: string
+                    example: GBP
                 account_code:
                     type: string
                     example: 'Account 001'
@@ -2513,6 +2585,11 @@ components:
                     type: number
 
         WhatIfResponse:
+            description: >-
+                In staging, summary and portfolio monetary values use the current General
+                Currency. Contract rows add reporting_currency_code, initial_margin_1/2
+                and option_liquidation_value_1/2 in that currency. Legacy im_usd_1/2 and
+                olv_usd_1/2 remain USD and their currency_code remains USD.
             type: object
             required: [what_if]
             properties:

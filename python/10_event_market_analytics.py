@@ -17,6 +17,7 @@ HEADERS = {
 # these tickers when their markets expire.
 payload = {
     "vendor_symbology": "clearing",
+    "currency_code": "USD",  # Explicit currency for the USD comparison below.
     "calculation_type": "margins",
     "in_memory": True,
     "portfolio": [

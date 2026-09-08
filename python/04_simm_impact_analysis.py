@@ -31,6 +31,7 @@ def post_portfolio(payload: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 base_payload = {
+    "currency_code": "USD",  # Explicit currency for the USD comparison below.
     "calculation_type": "simm",
     "portfolio": [
         {

@@ -1,6 +1,7 @@
 import contextlib
 import copy
 import io
+import os
 import pathlib
 import runpy
 import unittest
@@ -35,6 +36,24 @@ def run_example(filename, replies):
 
 
 class AnalyticsExamplesTest(unittest.TestCase):
+    def test_reporting_currency_example_converts_without_a_gbp_instrument(self):
+        response = {"data": [{"currency_version": 1, "currency_code": "GBP", "reporting_fxrate": 0.8,
+            "initial_margin": 1600, "margin_by_ccp": [
+                {"clearing_org": "CME", "currency_code": "USD", "fxrate": 1, "initial_margin": 1000},
+                {"clearing_org": "EUREX", "currency_code": "EUR", "fxrate": 0.9, "initial_margin": 900},
+            ]}]}
+        with patch.dict(os.environ, {"C9_API_ENDPOINT": "https://example.test", "C9_API_SECRET": "test"}):
+            calls, output = run_example("14_reporting_currency.py", [response])
+        self.assertEqual(calls[0][1]["currency_code"], "GBP")
+        self.assertIn("Initial margin: GBP 1,600.00", output)
+        self.assertIn("EUREX: GBP 800.00 (native EUR 900.00)", output)
+        self.assertIn("CME: GBP 800.00 (native USD 1,000.00)", output)
+
+    def test_reporting_currency_example_refuses_an_unversioned_response(self):
+        with patch.dict(os.environ, {"C9_API_ENDPOINT": "https://example.test", "C9_API_SECRET": "test"}):
+            with self.assertRaisesRegex(RuntimeError, "staging reporting-currency version 1"):
+                run_example("14_reporting_currency.py", [{"data": [{"currency_code": "GBP", "initial_margin": 800}]}])
+
     def test_occ_example_posts_identical_books_and_prints_comparison(self):
         response = {
             "data": [

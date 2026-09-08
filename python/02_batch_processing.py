@@ -99,14 +99,20 @@ while True:
 
 print(f"\nFetched {len(batch_accounts)} account results")
 
-total_im = sum(a.get("initial_margin") or 0 for a in batch_accounts)
-print(f"Total initial margin across batch: ${total_im:,.2f}\n")
+totals_by_currency = {}
+for account in batch_accounts:
+    currency = account.get("currency_code")
+    if not currency:
+        continue  # Unknown currencies cannot safely be aggregated.
+    totals_by_currency[currency] = totals_by_currency.get(currency, 0) + (account.get("initial_margin") or 0)
+for currency, total_im in totals_by_currency.items():
+    print(f"Total initial margin across batch: {currency} {total_im:,.2f}\n")
 
 # Print the top 5 accounts by initial margin
 top = sorted(batch_accounts, key=lambda a: a.get("initial_margin") or 0, reverse=True)[:5]
 print("Top 5 accounts by initial margin:")
 for a in top:
-    print(f"  {a['account_code']}: ${a['initial_margin']:,.2f} ({a['status']})")
+    print(f"  {a['account_code']}: {a.get('currency_code', 'currency unavailable')} {a['initial_margin']:,.2f} ({a['status']})")
 
 # `source` is "live" when the account still carries this batch's calculation, so
 # every field is populated. It turns "history" once a later calculation has
@@ -137,7 +143,7 @@ detail = detail_response.json()
 print(f"\nDrill-down for {first['account_code']}:")
 for account in detail:
     positions = account.get("portfolio") or []
-    print(f"  {len(positions)} positions, IM ${account['initial_margin']:,.2f}")
+    print(f"  {len(positions)} positions, IM {account.get('currency_code', 'currency unavailable')} {account['initial_margin']:,.2f}")
 
 # portfolio_id is derived from the account code, so you can address one account
 # without reading the list first:

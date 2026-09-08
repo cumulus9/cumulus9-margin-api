@@ -38,6 +38,7 @@ def post_portfolio(payload: dict) -> dict:
 
 payload = {
     "vendor_symbology": "clearing",
+    "currency_code": "USD",  # Explicit currency for the USD comparison below.
     "calculation_type": "margins",
     "portfolio": [
         {

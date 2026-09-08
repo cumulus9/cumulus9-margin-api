@@ -81,7 +81,7 @@ payload = {
 results = post_portfolio(payload)
 
 for account in results["data"]:
-    print(f"{account['account_code']}: initial_margin = ${account['initial_margin']:,.2f}")
+    print(f"{account['account_code']}: initial_margin = {account.get('currency_code', 'currency unavailable')} {account['initial_margin']:,.2f}")
 
 # Full JSON response:
 print(json.dumps(results, indent=2))

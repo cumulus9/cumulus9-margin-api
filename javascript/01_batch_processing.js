@@ -69,8 +69,15 @@ async function main() {
 
     console.log(`\nFetched ${accounts.length} account results`)
 
-    const totalIm = accounts.reduce((sum, a) => sum + (a.initial_margin || 0), 0)
-    console.log(`Total initial margin across batch: ${totalIm.toLocaleString()}`)
+    const totalsByCurrency = new Map()
+    for (const account of accounts) {
+        const currency = account.currency_code
+        if (!currency) continue // Unknown currencies cannot safely be aggregated.
+        totalsByCurrency.set(currency, (totalsByCurrency.get(currency) || 0) + (account.initial_margin || 0))
+    }
+    for (const [currency, total] of totalsByCurrency) {
+        console.log(`Total initial margin across batch: ${currency} ${total.toLocaleString()}`)
+    }
 
     // Step 4: Drill down into one account. The call above returns totals; this
     // returns the full calculation detail for a single account.

@@ -6,6 +6,42 @@ Submit a portfolio of positions via a single POST request and receive margin res
 
 ---
 
+## Reporting currency availability
+
+The reporting-currency contract below is available in **staging**. It has not
+been released to the public production API. Production callers must continue to
+inspect each result's currency and must not assume the new fields are present.
+
+In staging, omitting request `currency_code` uses the client's General Currency
+setting. An explicit `currency_code`, such as `GBP`, overrides that default for
+the calculation. Newly normalized results carry `currency_version: 1`,
+`currency_code`, and `reporting_fxrate` (reporting-currency units per USD, nullable when unavailable).
+Account/result read surfaces use the client's current General Currency setting;
+retain the synchronous calculation response when you need its explicit request
+currency. Stored older results require normalization before monetary figures can
+be compared across currencies.
+
+For version 1 results, headline amounts and normalized analytics/P&L use the
+reported currency. Native instrument prices, quantities, percentages and margin
+rows keep their own units. A native row's `fxrate` remains native-currency units
+per USD. Convert its monetary amount with
+`native_amount / row.fxrate * result.reporting_fxrate`. For example, EUR 900 at
+`fxrate: 0.9` becomes GBP 800 when `reporting_fxrate: 0.8`, even if the portfolio
+contains no GBP instruments. Missing rates mean unavailable conversion, never a
+rate of one or a raw native amount relabelled as the reporting currency.
+
+Where a row exposes `reporting_currency_code`, `reporting_fxrate` and
+`reporting_<amount>` fields, those are ready-to-use reporting equivalents. The
+**row** `reporting_fxrate` is native-currency units per reporting-currency unit,
+so it differs from the **top-level** rate above. Existing native fields stay intact.
+Fields explicitly named `*_usd`, including CRIF sensitivities and legacy what-if
+fields, continue to mean USD.
+
+Older unversioned responses can contain headline amounts in their stated currency
+alongside USD P&L or native-currency analytics. Do not relabel or uniformly scale
+all fields. The [reporting-currency example](python/14_reporting_currency.py)
+requires staging version 1 and demonstrates the native/reporting distinction.
+
 ## Authentication
 
 All requests require an API key sent as a Bearer token.
@@ -93,7 +129,7 @@ All parameters are set at the top level of the JSON request body alongside the `
 | `calculation_type`            | `string`        | `"all"`               | Calculation modes: `"margins"`, `"analytics"`, `"simm"`, `"all"`. Combine with commas, e.g. `"margins,analytics"`                              |
 | `vendor_symbology`            | `string`        | `"clearing"`          | Position symbology format: `"clearing"`, `"globex"`, `"ion"`, `"gmi"`, `"tt_new"`. `"globex"` reads CME Group positions from their Globex codes and every other venue from clearing |
 | `cme_symbology`               | `string`        | `"clearing"`          | **Deprecated.** `"globex"` here does what `vendor_symbology: "globex"` does; send that instead. Still honoured |
-| `currency_code`               | `string`        | `"USD"`               | Base currency for aggregated results (ISO 4217). Supported: `USD`, `EUR`, `GBP`, `JPY`, `CHF`, `AUD`, `CAD`, `BRL`, `CNH`, `HKD`, `INR`, `NZD` |
+| `currency_code`               | `string`        | Environment setting in staging; `"USD"` in production | Reporting currency for aggregated results (ISO 4217). Explicit values override the environment default. Supported: `USD`, `EUR`, `GBP`, `JPY`, `CHF`, `AUD`, `CAD`, `BRL`, `CNH`, `HKD`, `INR`, `NZD` |
 | `bdate`                       | `integer`       | previous business day | Calculation date in `YYYYMMDD` format                                                                                                          |
 | `price_date`                  | `integer`       | previous business day | Price date in `YYYYMMDD` format                                                                                                                |
 | `cycle_code`                  | `string`        | —                     | Exchange cycle code                                                                                                                            |
@@ -670,7 +706,9 @@ Each element in the `data` array contains:
 | `account_code`                 | `string`  | Account identifier from the input                                 |
 | `status`                       | `string`  | `"done"` on success                                               |
 | `price_date`                   | `integer` | Calculation date (`YYYYMMDD`)                                     |
-| `currency_code`                | `string`  | Base currency for aggregated results                              |
+| `currency_code`                | `string`  | Reporting currency for aggregated results                         |
+| `reporting_fxrate`             | `number`  | Staging: reporting-currency units per USD                        |
+| `currency_version`             | `integer` | Staging: `1` identifies normalized monetary results              |
 | `initial_margin`               | `number`  | Total initial margin requirement                                  |
 | `gross_margin`                 | `number`  | Gross margin before offsets                                       |
 | `requirement`                  | `number`  | Net margin requirement                                            |
@@ -851,7 +889,7 @@ is the staged portfolio.
 {
     "what_if": {
         "summary": {
-            "currency_code": "USD",
+            "currency_code": "GBP",
             "gross_requirement_1": 1250000, "gross_requirement_2": 1310000,
             "gross_margin_1": 1400000,      "gross_margin_2": 1465000,
             "option_liquidation_value_1": 150000, "option_liquidation_value_2": 155000,
@@ -865,7 +903,10 @@ is the staged portfolio.
                 "cc_code": "ZC", "cc_name": "Corn", "sector": "Agriculture",
                 "sub_sector": "Grains", "currency_code": "USD",
                 "im_usd_1": 210000, "im_usd_2": 245000,
-                "olv_usd_1": 0, "olv_usd_2": 0
+                "olv_usd_1": 0, "olv_usd_2": 0,
+                "reporting_currency_code": "GBP",
+                "initial_margin_1": 168000, "initial_margin_2": 196000,
+                "option_liquidation_value_1": 0, "option_liquidation_value_2": 0
             }
         ],
         "portfolio": []
@@ -873,9 +914,16 @@ is the staged portfolio.
 }
 ```
 
-`summary` is the portfolio-level before/after pair. `margin_by_contract` is keyed
-on clearing organisation, exchange and contract code, **converted to USD** so the
-two sides are comparable, and carries a row for every contract on either side — a
+`summary` is the portfolio-level before/after pair. In staging, both sides use
+the current General Currency; the example uses GBP with a GBP/USD rate of 0.8.
+The contract-row `initial_margin_1/2` and `option_liquidation_value_1/2` use
+`reporting_currency_code`. The legacy `im_usd_1/2` and `olv_usd_1/2` remain USD
+for compatibility, and that row's legacy `currency_code` remains `USD`.
+Portfolio-level `notional_1/2` uses the summary reporting currency.
+
+`margin_by_contract` is keyed on clearing organisation, exchange and contract
+code. Its legacy USD fields remain comparable and it carries a row for every
+contract on either side — a
 contract only in the baseline reports `im_usd_2: 0`, and one only in the staged
 portfolio reports `im_usd_1: 0`, so positions opened and closed both show up.
 `portfolio` is the same comparison at position level.
@@ -991,7 +1039,7 @@ response = requests.post(
 
 results = response.json()
 for account in results["data"]:
-    print(f"{account['account_code']}: ${account['initial_margin']:,.2f}")
+    print(f"{account['account_code']}: {account.get('currency_code', 'currency unavailable')} {account['initial_margin']:,.2f}")
 ```
 
 ### Batch submission (Python)
@@ -1039,7 +1087,7 @@ results = requests.get(
 ).json()
 
 for account in results["results"]:
-    print(f"{account['account_code']}: ${account['initial_margin']:,.2f}")
+    print(f"{account['account_code']}: {account.get('currency_code', 'currency unavailable')} {account['initial_margin']:,.2f}")
 
 # Full drill-down for one account
 detail = requests.get(

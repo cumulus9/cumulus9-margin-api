@@ -58,7 +58,7 @@ cumulus9
     .postPortfolio(payload)
     .then((results) => {
         for (const account of results.data) {
-            console.log(`${account.account_code}: initial_margin = $${account.initial_margin.toLocaleString()}`)
+            console.log(`${account.account_code}: initial_margin = ${account.currency_code || 'currency unavailable'} ${account.initial_margin.toLocaleString()}`)
         }
         console.log(JSON.stringify(results, null, 2))
     })

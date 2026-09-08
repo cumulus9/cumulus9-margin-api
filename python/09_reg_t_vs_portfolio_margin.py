@@ -18,6 +18,7 @@ HEADERS = {
 # C requests risk-based TIMS portfolio margin.
 payload = {
     "vendor_symbology": "clearing",
+    "currency_code": "USD",  # Explicit currency for the USD comparison below.
     "calculation_type": "margins",
     "in_memory": True,
     "portfolio": [
