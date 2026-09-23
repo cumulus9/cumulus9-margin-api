@@ -15,6 +15,15 @@ def validate(schema_name, value):
 
 
 class OpenApiExamplesTest(unittest.TestCase):
+    def test_healthcheck_is_an_unauthenticated_liveness_probe(self):
+        operation = OPENAPI["paths"]["/healthcheck"]["get"]
+        self.assertEqual(operation["security"], [])
+
+        schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+        self.assertEqual(schema["required"], ["healthcheck"])
+        self.assertEqual(set(schema["properties"]), {"healthcheck"})
+        jsonschema.validate({"healthcheck": 1776864774333}, schema)
+
     def test_stress_scenario_supports_underlying_shock_types(self):
         validate(
             "StressScenarioInput",

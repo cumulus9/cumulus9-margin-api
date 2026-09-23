@@ -13,7 +13,8 @@ info:
         retain USD or native units even when headline totals state another currency.
 
         ## Authentication
-        Use your API key (`sk-...` prefix) as a Bearer token in the `Authorization` header for all requests.
+        Use your API key (`sk-...` prefix) as a Bearer token in the `Authorization` header for all requests
+        except the unauthenticated `GET /healthcheck` liveness probe.
 
         ## Getting Started
         1. Obtain `C9_API_ENDPOINT` and `C9_API_SECRET` from support@cumulus9.com.
@@ -27,6 +28,8 @@ info:
         name: MIT
         url: https://opensource.org/license/mit
 tags:
+    - name: healthcheck
+      description: Check API liveness
     - name: portfolios
       description: Submit portfolios and calculate margin requirements
     - name: batch
@@ -49,6 +52,32 @@ servers:
               default: staging.api.cumulus9.com
               description: Host issued with your API credentials.
 paths:
+    /healthcheck:
+        get:
+            summary: Check API liveness
+            description: |
+                Confirm that the API process is running and able to answer HTTP requests.
+                This endpoint does not check databases, calculation engines, or other dependencies.
+            operationId: getHealthcheck
+            tags:
+                - healthcheck
+            security: []
+            responses:
+                '200':
+                    description: The API process is running.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [healthcheck]
+                                properties:
+                                    healthcheck:
+                                        description: Current Unix time in milliseconds.
+                                        type: integer
+                                        format: int64
+                                        example: 1776864774333
+                                additionalProperties: false
+
     /portfolios:
         post:
             summary: Calculate portfolio margin

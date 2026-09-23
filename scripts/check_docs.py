@@ -18,6 +18,7 @@ SCHEMA = ROOT / "open-api-schema.yaml"
 README = ROOT / "README.md"
 
 PUBLIC_OPERATIONS = {
+    ("GET", "/healthcheck"),
     ("POST", "/portfolios"),
     ("POST", "/portfolios/optimize"),
     ("POST", "/portfolios/batch"),
@@ -89,10 +90,6 @@ def check_contract(document: dict) -> None:
             parameters = operation.get("parameters", [])
             if any(parameter.get("name") == "username" for parameter in parameters if isinstance(parameter, dict)):
                 fail(f"{method.upper()} {path} documents the internal username query parameter")
-
-    combined = SCHEMA.read_text().lower() + README.read_text().lower()
-    if "/healthcheck" in combined:
-        fail("healthcheck endpoints must remain undocumented until their contract is resolved")
 
     documented = documented_operations(README.read_text())
     if documented != PUBLIC_OPERATIONS:

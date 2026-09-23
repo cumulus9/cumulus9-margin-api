@@ -44,7 +44,7 @@ requires staging version 1 and demonstrates the native/reporting distinction.
 
 ## Authentication
 
-All requests require an API key sent as a Bearer token.
+All requests except `GET /healthcheck` require an API key sent as a Bearer token.
 
 ```
 Authorization: Bearer <your_api_secret>
@@ -59,6 +59,12 @@ API keys use the `sk-...` prefix format. To obtain credentials (`C9_API_ENDPOINT
 
 `open-api-schema.yaml` is the canonical external contract. The public surface is
 limited to the operations below.
+
+### Service status
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/healthcheck` | Confirm that the API process is running |
 
 ### Calculations and results
 
