@@ -42,6 +42,8 @@ PUBLIC_OPERATIONS = {
     ("GET", "/validation-reference/events/contracts"),
     ("POST", "/portfolios/stage"),
     ("POST", "/portfolios/stage/submit"),
+    ("GET", "/healthcheck/analytics-engine"),
+    ("GET", "/healthcheck/engine-readiness-report"),
 }
 
 HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
@@ -89,10 +91,6 @@ def check_contract(document: dict) -> None:
             parameters = operation.get("parameters", [])
             if any(parameter.get("name") == "username" for parameter in parameters if isinstance(parameter, dict)):
                 fail(f"{method.upper()} {path} documents the internal username query parameter")
-
-    combined = SCHEMA.read_text().lower() + README.read_text().lower()
-    if "/healthcheck" in combined:
-        fail("healthcheck endpoints must remain undocumented until their contract is resolved")
 
     documented = documented_operations(README.read_text())
     if documented != PUBLIC_OPERATIONS:

@@ -106,6 +106,16 @@ enabled on your licence. An unlicensed request returns `403` with
 | `GET` | `/validation-reference/events/search` | Search active event markets |
 | `GET` | `/validation-reference/events/contracts` | List active event-market contracts |
 
+### Engine status (beta)
+
+Beta endpoints. The response shapes may change, and availability depends on
+your licence: an expired or unlicensed key receives `403`.
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/healthcheck/analytics-engine` | Live status of every calculation engine and the parameter set each one is running |
+| `GET` | `/healthcheck/engine-readiness-report` | Parameter readiness history across all engines |
+
 ### Staged What-If
 
 | Method | Path | Description |
@@ -935,6 +945,85 @@ key and within its permitted account codes.
 | ------ | ------------------------------------------------------------------------------ |
 | `403`  | You are not authorised to run a what-if on that portfolio                      |
 | `409`  | The baseline results have aged out of storage — re-submit the portfolio first   |
+
+---
+
+## Engine Status (Beta)
+
+> **Beta.** These endpoints are offered as a preview. Field names and the
+> response layout may change without a version bump while the contract settles,
+> so read them defensively and do not build hard dependencies on optional fields.
+> Access is subject to your licence: an expired or unlicensed key receives `403`.
+
+Margin is only as current as the parameters behind it. These endpoints answer
+"are today's numbers based on today's parameters?" without a support request, and
+they are also the quickest way to confirm that your endpoint and API key are valid
+before sending a portfolio.
+
+### GET `/healthcheck/analytics-engine`
+
+Returns one element per calculation engine in your environment. Each element
+lists the engine's version and overall status, plus one entry per parameter set
+it is serving.
+
+```bash
+curl -sS "$C9_API_ENDPOINT/healthcheck/analytics-engine" \
+  -H "Authorization: Bearer $C9_API_SECRET"
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `service` | string | Engine identifier, for example `span`, `simm`, `analytics` |
+| `version` | string | Engine build version |
+| `status` | string | `OK`, `WARNING` or `FAILED` for the engine as a whole |
+| `healthcheck` | integer | Epoch milliseconds of the engine's own status reply |
+| `parameters` | array | One entry per parameter set, see below |
+| `stats` | object | Operational counters (queue depth, response times). Shape not guaranteed |
+
+Each `parameters` entry:
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `parameter` | string | Parameter set name, usually the clearing house or venue |
+| `cycle_code` | string | Settlement cycle when the venue publishes several a day, otherwise `base` |
+| `bdate` | string | Business date the parameters belong to, `YYYY-MM-DD` |
+| `status` | string | `OK`, `WARNING` or `FAILED` for this parameter set |
+| `parameter_published_at` | string | ISO 8601 time the venue published the file |
+| `parameter_size` | integer | Size of the loaded parameter file in bytes |
+| `instance_started_at` | string | ISO 8601 time the engine instance started |
+| `start_time` | string | ISO 8601 time the engine finished loading and became ready |
+| `startup_time` | integer | Milliseconds from instance start to ready |
+| `additional` | object | Engine-specific extras, optional |
+
+### GET `/healthcheck/engine-readiness-report`
+
+Returns the append-only readiness history across all engines: one record each
+time an engine became ready with a parameter set, or was observed running. Use
+it to check whether a file arrived late, whether an engine has been restarting,
+or what a venue's publication rhythm looks like. The array is large (tens of
+thousands of records) and grows over time. Filter client-side on `parameter`
+and `cycle_code`, matching case-insensitively, and treat a missing `cycle_code`
+as `base`.
+
+```bash
+curl -sS "$C9_API_ENDPOINT/healthcheck/engine-readiness-report" \
+  -H "Authorization: Bearer $C9_API_SECRET"
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `event_time` | string | ISO 8601 time the record was written |
+| `parameter` | string | Parameter set name, matches the live status endpoint |
+| `cycle_code` | string or null | Settlement cycle, `null` or `base` when the venue has none |
+| `bdate` | string or null | Business date of the parameter set |
+| `status` | string | `OK`, `WARNING` or `FAILED` |
+| `parameter_published_at` | string or null | ISO 8601 time the venue published the file |
+| `parameter_size` | integer or null | Size of the loaded file in bytes |
+| `instance_started_at` | string or null | ISO 8601 time the engine instance started |
+| `start_time` | string or null | ISO 8601 time the engine became ready |
+| `startup_time` | integer or null | Milliseconds from instance start to ready |
+| `source` | string | `boot` when the engine wrote the record itself, `observed` when sampled by the readiness observer (timing fields are then `null`) |
+| `engine_partition` | string | Storage partition the record was written under. Provenance only, do not parse it |
 
 ---
 

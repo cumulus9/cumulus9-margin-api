@@ -41,6 +41,8 @@ tags:
       description: Discover licensed event-market contracts
     - name: what-if
       description: Stage a changed portfolio and compare it with a stored result
+    - name: engine-status
+      description: Beta. Live engine status and parameter readiness history
 servers:
     - url: 'https://{host}'
       description: Your Cumulus9 API endpoint
@@ -745,6 +747,66 @@ paths:
                     description: The caller cannot view the baseline portfolio.
                 '409':
                     description: The baseline result is no longer available. Submit it again before comparing.
+
+    /healthcheck/analytics-engine:
+        get:
+            summary: Get live engine status (beta)
+            description: |
+                **Beta.** Field names and layout may change while the contract settles.
+                Access is subject to your licence: an expired or unlicensed key receives `403`.
+
+                One element per calculation engine in your environment, each carrying the
+                engine version, overall status and one entry per parameter set it serves.
+                Also the quickest way to confirm your endpoint and API key before sending a
+                portfolio.
+            operationId: getEngineStatus
+            tags:
+                - engine-status
+            responses:
+                '200':
+                    description: Engine status list.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/EngineStatus'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '403':
+                    description: The licence does not permit this operation or has expired.
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+
+    /healthcheck/engine-readiness-report:
+        get:
+            summary: Get parameter readiness history (beta)
+            description: |
+                **Beta.** Field names and layout may change while the contract settles.
+                Access is subject to your licence: an expired or unlicensed key receives `403`.
+
+                The append-only readiness history across all engines: one record each time
+                an engine became ready with a parameter set, or was observed running. The
+                array is large and grows over time. Filter client-side on `parameter` and
+                `cycle_code` (case-insensitive, a missing `cycle_code` means `base`).
+            operationId: getEngineReadinessReport
+            tags:
+                - engine-status
+            responses:
+                '200':
+                    description: Readiness history.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/EngineReadinessRecord'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '403':
+                    description: The licence does not permit this operation or has expired.
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
 
 components:
     parameters:
@@ -2641,6 +2703,117 @@ components:
                 error:
                     type: string
                     example: Internal Server Error
+
+        EngineParameterStatus:
+            description: Beta. One parameter set served by an engine.
+            type: object
+            properties:
+                parameter:
+                    type: string
+                    description: Parameter set name, usually the clearing house or venue.
+                cycle_code:
+                    type: string
+                    description: Settlement cycle when the venue publishes several a day, otherwise `base`.
+                bdate:
+                    type: string
+                    description: Business date the parameters belong to, `YYYY-MM-DD`.
+                status:
+                    type: string
+                    enum: [OK, WARNING, FAILED]
+                parameter_published_at:
+                    type: string
+                    format: date-time
+                    description: When the venue published the parameter file.
+                parameter_size:
+                    type: integer
+                    description: Size of the loaded parameter file in bytes.
+                instance_started_at:
+                    type: string
+                    format: date-time
+                    description: When the engine instance started.
+                start_time:
+                    type: string
+                    format: date-time
+                    description: When the engine finished loading and became ready.
+                startup_time:
+                    type: integer
+                    description: Milliseconds from instance start to ready.
+                additional:
+                    type: object
+                    additionalProperties: true
+                    description: Engine-specific extras. Optional and not guaranteed.
+        EngineStatus:
+            description: Beta. Live status of one calculation engine.
+            type: object
+            properties:
+                service:
+                    type: string
+                    description: Engine identifier, for example `span`, `simm`, `analytics`.
+                version:
+                    type: string
+                status:
+                    type: string
+                    enum: [OK, WARNING, FAILED]
+                healthcheck:
+                    type: integer
+                    format: int64
+                    description: Epoch milliseconds of the engine's own status reply.
+                parameters:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/EngineParameterStatus'
+                stats:
+                    type: object
+                    additionalProperties: true
+                    description: Operational counters such as queue depth and response times. Shape not guaranteed.
+        EngineReadinessRecord:
+            description: Beta. One entry of the parameter readiness history.
+            type: object
+            properties:
+                event_time:
+                    type: string
+                    format: date-time
+                    description: When the record was written.
+                parameter:
+                    type: string
+                    description: Parameter set name, matches the live status endpoint.
+                cycle_code:
+                    type: string
+                    nullable: true
+                    description: Settlement cycle. `null` or `base` when the venue has none.
+                bdate:
+                    type: string
+                    nullable: true
+                status:
+                    type: string
+                    enum: [OK, WARNING, FAILED]
+                parameter_published_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                parameter_size:
+                    type: integer
+                    nullable: true
+                instance_started_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                start_time:
+                    type: string
+                    format: date-time
+                    nullable: true
+                startup_time:
+                    type: integer
+                    nullable: true
+                source:
+                    type: string
+                    enum: [boot, observed]
+                    description: >-
+                        `boot` when the engine wrote the record itself, `observed` when the
+                        readiness observer sampled it (timing fields are then `null`).
+                engine_partition:
+                    type: string
+                    description: Storage partition the record was written under. Provenance only, do not parse it.
 
     responses:
         SyncResults:
