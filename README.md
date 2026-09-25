@@ -728,16 +728,17 @@ Each element in the `data` array contains:
 | `cvm`                          | `number`  | Contingent variation margin component in result currency           |
 | `sellers_security`             | `number`  | Seller's security component in result currency                     |
 | `buyers_security`              | `number`  | Buyer's security component in result currency                      |
-| `value_at_risk`                | `number`  | Portfolio Value-at-Risk (when analytics requested)                |
-| `vm_at_risk`                   | `number`  | Worst expected variation-margin outflow over the MPOR at the configured confidence level (the P&L VaR) |
+| `analytics_status`             | `string`  | Present as `"unavailable"` when required analytics inputs could not be priced; see `exceptions` |
+| `value_at_risk`                | `number?` | Portfolio Value-at-Risk (when analytics requested); `null` when unavailable |
+| `vm_at_risk`                   | `number?` | Worst expected variation-margin outflow over the MPOR at the configured confidence level (the P&L VaR); `null` when unavailable |
 | `im_at_risk`                   | `number?` | Worst expected initial-margin increase over the MPOR at the configured confidence level, under the environment's selected methodology |
 | `stress_im`                    | `number?` | The same figure under the worst move observed in the window rather than the confidence-level quantile; always at or above `im_at_risk` |
 | `im_at_risk_basis`             | `string?` | Methodology behind `im_at_risk`: `var_scaling`, `scan_elasticity`, `margin_history`, or `engine_replay_unavailable`; `null` when no figure is available |
 | `im_at_risk_breakdown`         | `array?`  | Per venue group and currency contribution to `im_at_risk` (`var_scaling` / `scan_elasticity` only) |
 | `im_at_risk_excluded`          | `array?`  | Margin carrying no scaling factor, and therefore excluded from `im_at_risk`, listed rather than dropped |
-| `stress_loss`                  | `number`  | Worst historical daily loss (when analytics requested)            |
+| `stress_loss`                  | `number?` | Worst historical daily loss (when analytics requested); `null` when unavailable |
 | `option_pnl_provenance`        | `object?` | How each vanilla option's historical P&L was built under `risk_metrics.option_pnl_method`: `requested_method`, `historical_positions`, `direct_positions` (own volatility history), `proxy_positions` (a curated proxy's history, listed in `proxy_contracts`), `delta_fallback_positions` and `fallbacks` (`position_id`, `contract_id`, `reason` in `missing_volatility_history`, `insufficient_volatility_history`, `invalid_revaluation_input`). A fallback is a priced position, not an error. Absent on results calculated before the field existed |
-| `dv01`                         | `number`  | Dollar value of a basis point (when analytics requested)          |
+| `dv01`                         | `number?` | Dollar value of a basis point (when analytics requested); `null` when unavailable |
 | `additional_margin`            | `number`  | Add-on charges, including converted delivery-period components     |
 | `pnl`                          | `number`  | P&L                                                               |
 | `itd_volume`                   | `number`  | Intraday traded volume                                            |
@@ -770,6 +771,28 @@ Each element in the `data` array contains:
 | `exceptions`                   | `array`   | Positions excluded from calculations with reason                  |
 | `closest_matches`              | `array`   | Positions auto-corrected when `use_closest_match` is `true`       |
 | `portfolio`                    | `array`   | Enriched position records with resolved contract details          |
+
+If a required position cannot be priced, the account reports
+`analytics_status: "unavailable"` and explicit `null` values for VaR, VM-at-risk,
+stress loss and DV01. Do not coerce these values to zero or use a calculated
+subset as the complete portfolio. A genuine calculated zero remains numeric `0`.
+Independent margin and event-risk components can remain available. Request
+`status: "success"` describes processing, not complete analytics coverage.
+
+An unavailable account result can include:
+
+```json
+{
+    "analytics_status": "unavailable",
+    "value_at_risk": null,
+    "vm_at_risk": null,
+    "stress_loss": null,
+    "dv01": null,
+    "exceptions": [
+        {"engine": "analytics", "position_id": "0", "exception": "position not priced: required history unavailable"}
+    ]
+}
+```
 
 ### `margin_by_ccp` Element
 

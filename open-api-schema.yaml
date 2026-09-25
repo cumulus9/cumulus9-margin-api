@@ -1687,9 +1687,18 @@ components:
                     description: Buyer's security component in result currency.
                     type: number
                     example: 0
+                analytics_status:
+                    description: >-
+                        Present as unavailable when required analytics inputs could not be priced.
+                        Exceptions explain why; partial portfolio analytics are not reported as totals.
+                        Request success does not imply complete analytics coverage.
+                    type: string
+                    enum: [unavailable]
+                    example: unavailable
                 value_at_risk:
-                    description: Portfolio VaR (when analytics requested).
+                    description: Portfolio VaR (when analytics requested). Null when analytics are unavailable.
                     type: number
+                    nullable: true
                 option_pnl_provenance:
                     description: >-
                         How each vanilla option's historical P&L was built under
@@ -1737,7 +1746,9 @@ components:
                     description: >-
                         Worst expected variation-margin outflow over the margin period of risk at the
                         configured confidence level (the portfolio P&L VaR), in result currency.
+                        Null when analytics are unavailable.
                     type: number
+                    nullable: true
                 im_at_risk:
                     description: >-
                         Worst expected initial-margin increase over the margin period of risk at the
@@ -1811,11 +1822,13 @@ components:
                             reason:
                                 type: string
                 stress_loss:
-                    description: Worst historical daily loss (when analytics requested).
+                    description: Worst historical daily loss (when analytics requested). Null when analytics are unavailable.
                     type: number
+                    nullable: true
                 dv01:
-                    description: Dollar value of a basis point.
+                    description: Dollar value of a basis point. Null when analytics are unavailable.
                     type: number
+                    nullable: true
                 additional_margin:
                     description: Add-on charges, including converted delivery-period components where applicable.
                     type: number
