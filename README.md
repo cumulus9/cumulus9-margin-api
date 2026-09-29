@@ -728,7 +728,7 @@ Each element in the `data` array contains:
 | `cvm`                          | `number`  | Contingent variation margin component in result currency           |
 | `sellers_security`             | `number`  | Seller's security component in result currency                     |
 | `buyers_security`              | `number`  | Buyer's security component in result currency                      |
-| `analytics_status`             | `string`  | Present as `"unavailable"` when required analytics inputs could not be priced; see `exceptions` |
+| `analytics_status`             | `string`  | Present as `"unavailable"` when the analytics engine returned no results for the account; see `exceptions` |
 | `value_at_risk`                | `number?` | Portfolio Value-at-Risk (when analytics requested); `null` when unavailable |
 | `vm_at_risk`                   | `number?` | Worst expected variation-margin outflow over the MPOR at the configured confidence level (the P&L VaR); `null` when unavailable |
 | `im_at_risk`                   | `number?` | Worst expected initial-margin increase over the MPOR at the configured confidence level, under the environment's selected methodology |
@@ -772,27 +772,28 @@ Each element in the `data` array contains:
 | `closest_matches`              | `array`   | Positions auto-corrected when `use_closest_match` is `true`       |
 | `portfolio`                    | `array`   | Enriched position records with resolved contract details          |
 
-If a required position cannot be priced, the account reports
-`analytics_status: "unavailable"` and explicit `null` values for VaR, VM-at-risk,
-stress loss and DV01. Do not coerce these values to zero or use a calculated
-subset as the complete portfolio. A genuine calculated zero remains numeric `0`.
-Independent margin and event-risk components can remain available. Request
-`status: "success"` describes processing, not complete analytics coverage.
-
-An unavailable account result can include:
+If analytics cannot price an individual position, that position is listed in
+`exceptions` with the reason, and VaR, VM-at-risk, stress loss, DV01, stress
+tests and risk metrics are reported for the positions that were priced. Review
+`exceptions` to judge how much the excluded positions matter. For example, an
+option on or after its last trade date is excluded:
 
 ```json
 {
-    "analytics_status": "unavailable",
-    "value_at_risk": null,
-    "vm_at_risk": null,
-    "stress_loss": null,
-    "dv01": null,
+    "value_at_risk": 125000.0,
+    "stress_loss": 240000.0,
     "exceptions": [
-        {"engine": "analytics", "position_id": "0", "exception": "position not priced: required history unavailable"}
+        {"engine": "analytics", "position_id": "0", "exception": "position not priced: option expired: last trade date 20260925 is not after the valuation date 20260925 (strike=70)"}
     ]
 }
 ```
+
+If the analytics engine returns no results for the account, the account reports
+`analytics_status: "unavailable"` and explicit `null` values for VaR, VM-at-risk,
+stress loss and DV01. Do not coerce these values to zero. A genuine calculated
+zero remains numeric `0`. Independent margin and event-risk components can remain
+available. Request `status: "success"` describes processing, not complete
+analytics coverage.
 
 ### `margin_by_ccp` Element
 

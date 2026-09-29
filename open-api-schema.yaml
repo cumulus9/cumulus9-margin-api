@@ -1689,9 +1689,10 @@ components:
                     example: 0
                 analytics_status:
                     description: >-
-                        Present as unavailable when required analytics inputs could not be priced.
-                        Exceptions explain why; partial portfolio analytics are not reported as totals.
-                        Request success does not imply complete analytics coverage.
+                        Present as unavailable when the analytics engine returned no results for the account.
+                        Positions that cannot be priced individually are listed in exceptions, and the
+                        remaining positions keep their analytics. Request success does not imply complete
+                        analytics coverage.
                     type: string
                     enum: [unavailable]
                     example: unavailable
