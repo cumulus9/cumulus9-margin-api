@@ -49,12 +49,10 @@ margin breakdowns:
 | Field | Meaning |
 | --- | --- |
 | `initial_margin` | Supported model initial amount for the submitted account |
-| `maintenance_margin` | `number` | Supported maintenance amount; zero with reason when unsupported |
-| `margin` | `number\|null` | Account-selected charge; preserve explicit zero and null |
-| `margin_contract_version` | `integer` | `2` for the separated margin contract |
-| `margin_basis` / `margin_availability` | `string` / `object` | Selection basis and per-field provenance |
-| `maintenance_margin` | Supported maintenance amount for the same account and methodology |
-| `margin` | The actual account-selected charge, including supported custom markups |
+| `maintenance_margin` | Supported maintenance amount for the same account and methodology; zero with a reason when unsupported |
+| `margin` | Actual account-selected charge, including supported custom markups; preserve explicit zero and null |
+| `margin_contract_version` | `2` for the separated margin contract |
+| `margin_basis` / `margin_availability` | Selection basis and per-field provenance |
 
 Use `margin` for operational requirements, comparisons and selected-margin totals.
 Do not derive it from a universal hedge/speculator rule or force it to equal one
