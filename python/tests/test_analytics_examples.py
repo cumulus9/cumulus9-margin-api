@@ -51,7 +51,7 @@ class AnalyticsExamplesTest(unittest.TestCase):
 
     def test_reporting_currency_example_refuses_an_unversioned_response(self):
         with patch.dict(os.environ, {"C9_API_ENDPOINT": "https://example.test", "C9_API_SECRET": "test"}):
-            with self.assertRaisesRegex(RuntimeError, "staging reporting-currency version 1"):
+            with self.assertRaisesRegex(RuntimeError, "reporting-currency version 1"):
                 run_example("14_reporting_currency.py", [{"data": [{"currency_code": "GBP", "initial_margin": 800}]}])
 
     def test_occ_example_posts_identical_books_and_prints_comparison(self):

@@ -93,9 +93,12 @@ for r in results["data"]:
         parent = next((p for p in results["data"] if p["portfolio_id"] == r["parent_portfolio_id"]), None)
         if parent:
             label = f"{parent['account_code']} / {r['account_code']}"
-    im = r["initial_margin"]
+    im = r['margin'] if 'margin' in r else r.get('initial_margin')
+    if im is None:
+        print(f"  {r['account_code']}: applicable margin unavailable")
+        continue
     gm = r["gross_margin"]
-    print(f"{label:<30} initial_margin=${im:>14,.2f}  gross_margin=${gm:>14,.2f}")
+    print(f"{label:<30} margin=${im:>14,.2f}  gross_margin=${gm:>14,.2f}")
 
 # Full response for reference
 print("\nFull response:")

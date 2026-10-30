@@ -99,24 +99,32 @@ while True:
 
 print(f"\nFetched {len(batch_accounts)} account results")
 
+def selected_margin(row):
+    return row['margin'] if 'margin' in row else row.get('initial_margin')
+
+
 totals_by_currency = {}
 for account in batch_accounts:
-    currency = account.get("currency_code")
+    currency = account.get('currency_code')
     if not currency:
         continue  # Unknown currencies cannot safely be aggregated.
-    totals_by_currency[currency] = totals_by_currency.get(currency, 0) + (account.get("initial_margin") or 0)
-for currency, total_im in totals_by_currency.items():
-    print(f"Total initial margin across batch: {currency} {total_im:,.2f}\n")
+    selected = selected_margin(account)
+    prior = totals_by_currency.get(currency, 0)
+    totals_by_currency[currency] = None if selected is None or prior is None else prior + selected
+for currency, total in totals_by_currency.items():
+    amount = 'unavailable' if total is None else f'{total:,.2f}'
+    print(f'Total applicable margin across batch: {currency} {amount}')
 
-# Print the top 5 accounts by initial margin
-top = sorted(batch_accounts, key=lambda a: a.get("initial_margin") or 0, reverse=True)[:5]
-print("Top 5 accounts by initial margin:")
-for a in top:
-    print(f"  {a['account_code']}: {a.get('currency_code', 'currency unavailable')} {a['initial_margin']:,.2f} ({a['status']})")
+# Rank only accounts with an available selected amount, preserving zero.
+known = [account for account in batch_accounts if selected_margin(account) is not None]
+top = sorted(known, key=selected_margin, reverse=True)[:5]
+print('Top 5 accounts by applicable margin:')
+for account in top:
+    print(f"  {account['account_code']}: {account.get('currency_code', 'currency unavailable')} {selected_margin(account):,.2f} ({account['status']})")
 
 # `source` is "live" when the account still carries this batch's calculation, so
 # every field is populated. It turns "history" once a later calculation has
-# replaced the account's current figures: initial_margin, OLV, additional
+# replaced the account's current figures: initial_margin, maintenance_margin, margin and provenance, OLV, additional
 # margin, VaR and stress loss survive, while requirement and the gross figures
 # come back None rather than as a zero you would read as a real number.
 superseded = [a for a in batch_accounts if a["source"] == "history"]
@@ -143,7 +151,9 @@ detail = detail_response.json()
 print(f"\nDrill-down for {first['account_code']}:")
 for account in detail:
     positions = account.get("portfolio") or []
-    print(f"  {len(positions)} positions, IM {account.get('currency_code', 'currency unavailable')} {account['initial_margin']:,.2f}")
+    selected = selected_margin(account)
+    amount = 'unavailable' if selected is None else f'{selected:,.2f}'
+    print(f"  {len(positions)} positions, applicable margin {account.get('currency_code', 'currency unavailable')} {amount}")
 
 # portfolio_id is derived from the account code, so you can address one account
 # without reading the list first:

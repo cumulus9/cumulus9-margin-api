@@ -7,10 +7,11 @@ info:
         Supports SPAN, SPAN2, PRISMA, TIMS, NODAL VaR, IRM 2.0, JPX VaR, KRX, B3 Core, and ISDA SIMM.
 
         ## Reporting currency availability
-        Environment-default reporting currency and currency_version 1 are staging-only.
-        They have not been released to the public production API. Production responses
-        may omit reporting_fxrate and currency_version; older P&L/detail fields can
-        retain USD or native units even when headline totals state another currency.
+        New calculations expose initial_margin, maintenance_margin and the account-selected
+        margin with margin_contract_version 2 and availability metadata. Older records
+        retain their original selected charge under initial_margin. Reporting-currency
+        version 1 identifies normalized monetary amounts; inspect version and currency
+        metadata before comparing archived results.
 
         ## Authentication
         Use your API key (`sk-...` prefix) as a Bearer token in the `Authorization` header for all requests.
@@ -842,6 +843,26 @@ components:
                 default: KALSHI
 
     schemas:
+        MarginFieldAvailability:
+            type: object
+            required: [status]
+            properties:
+                status:
+                    type: string
+                    enum: [available, not_applicable, unavailable, legacy]
+                reason:
+                    type: string
+        MarginAvailability:
+            description: Per-field provenance. An aggregate may omit unsupported typed contributions; zero alone does not establish availability.
+            type: object
+            properties:
+                initial_margin:
+                    $ref: '#/components/schemas/MarginFieldAvailability'
+                maintenance_margin:
+                    $ref: '#/components/schemas/MarginFieldAvailability'
+                margin:
+                    $ref: '#/components/schemas/MarginFieldAvailability'
+
         PortfolioRequest:
             description: Top-level request payload for portfolio margin calculations.
             type: object
@@ -869,9 +890,9 @@ components:
                     example: clearing
                 currency_code:
                     description: >-
-                        Reporting currency for aggregated results (ISO 4217). In staging,
-                        omission uses the client's General Currency setting; an explicit
-                        value overrides it. Public production currently defaults to USD.
+                        Reporting currency for aggregated results (ISO 4217).
+                        Omitting the field uses the client's General Currency setting; an explicit
+                        value overrides it.
                     type: string
                     enum: [USD, EUR, GBP, JPY, CHF, AUD, CAD, BRL, CNH, HKD, INR, NZD]
                     example: GBP
@@ -1531,11 +1552,11 @@ components:
             type: object
             properties:
                 reporting_fxrate:
-                    description: Staging only. Reporting-currency units per USD.
+                    description: Reporting-currency units per USD.
                     type: number
                     nullable: true
                 currency_version:
-                    description: Staging only. Version 1 identifies normalized monetary values.
+                    description: Version 1 identifies normalized monetary values.
                     type: integer
                     enum: [1]
                 account_code:
@@ -1621,6 +1642,37 @@ components:
             description: Margin results and drill-down for a single account.
             type: object
             properties:
+                initial_margin_forecast:
+                    description: Typed initial margin forecast. Disabled forecasts are null.
+                    type: number
+                    nullable: true
+                maintenance_margin_forecast:
+                    description: Typed maintenance margin forecast. Disabled forecasts are null.
+                    type: number
+                    nullable: true
+                margin_forecast:
+                    description: Selected margin forecast. Disabled forecasts are null.
+                    type: number
+                    nullable: true
+                maintenance_margin:
+                    description: Supported maintenance amount for the same account and methodology. Unsupported amounts are zero with an availability reason.
+                    type: number
+                    nullable: true
+                margin:
+                    description: Account-selected charge, including supported markups. A present zero or null must never fall back to initial_margin.
+                    type: number
+                    nullable: true
+                margin_contract_version:
+                    description: Version 2 distinguishes typed initial and maintenance from the selected charge. Absent or null on legacy records.
+                    type: integer
+                    nullable: true
+                    enum: [2, null]
+                margin_basis:
+                    type: string
+                    nullable: true
+                    enum: [initial, maintenance, custom, single, mixed, null]
+                margin_availability:
+                    $ref: '#/components/schemas/MarginAvailability'
                 request_id:
                     type: string
                     example: '5c09862d8d690f8d821b47762ef06a6f'
@@ -1647,16 +1699,16 @@ components:
                     type: string
                     example: GBP
                 reporting_fxrate:
-                    description: Staging only. Reporting-currency units per USD; native row fxrate remains native units per USD.
+                    description: Reporting-currency units per USD; native row fxrate remains native units per USD.
                     type: number
                     nullable: true
                     example: 0.8
                 currency_version:
-                    description: Staging only. Version 1 identifies normalized monetary analytics and P&L; absent on legacy responses.
+                    description: Version 1 identifies normalized monetary analytics and P&L; absent on legacy responses.
                     type: integer
                     enum: [1]
                 initial_margin:
-                    description: Total initial margin requirement.
+                    description: Supported model initial amount for this account. Check margin_availability; legacy records may contain the selected charge here.
                     type: number
                     example: 4698720
                 gross_margin:
@@ -1993,20 +2045,47 @@ components:
         MarginByCCP:
             type: object
             properties:
+                reporting_margin:
+                    description: Selected charge converted into reporting_currency_code. A present null is unavailable, not a fallback to reporting_initial_margin.
+                    type: number
+                    nullable: true
+                reporting_maintenance_margin:
+                    description: Maintenance amount converted into reporting_currency_code, subject to margin_availability.
+                    type: number
+                    nullable: true
+                maintenance_margin:
+                    description: Supported maintenance amount for the same account and methodology. Unsupported amounts are zero with an availability reason.
+                    type: number
+                    nullable: true
+                margin:
+                    description: Account-selected charge, including supported markups. A present zero or null must never fall back to initial_margin.
+                    type: number
+                    nullable: true
+                margin_contract_version:
+                    description: Version 2 distinguishes typed initial and maintenance from the selected charge. Absent or null on legacy records.
+                    type: integer
+                    nullable: true
+                    enum: [2, null]
+                margin_basis:
+                    type: string
+                    nullable: true
+                    enum: [initial, maintenance, custom, single, mixed, null]
+                margin_availability:
+                    $ref: '#/components/schemas/MarginAvailability'
                 reporting_currency_code:
-                    description: Staging only. Currency of the additive reporting amounts.
+                    description: Currency of the additive reporting amounts.
                     type: string
                     example: GBP
                 reporting_fxrate:
-                    description: Staging only. Native-currency units per reporting-currency unit, unlike the top-level rate.
+                    description: Native-currency units per reporting-currency unit, unlike the top-level rate.
                     type: number
                     nullable: true
                 reporting_initial_margin:
-                    description: Staging only. Initial margin converted into reporting_currency_code.
+                    description: Initial margin converted into reporting_currency_code.
                     type: number
                     nullable: true
                 reporting_option_liquidation_value:
-                    description: Staging only. Option liquidation value converted into reporting_currency_code.
+                    description: Option liquidation value converted into reporting_currency_code.
                     type: number
                     nullable: true
                 venue_group_code:
@@ -2027,7 +2106,7 @@ components:
                 fxrate:
                     description: >-
                         Native-currency units per USD. Convert a native amount into the
-                        staging result currency with amount / fxrate * result.reporting_fxrate.
+                        result currency with amount / fxrate * result.reporting_fxrate.
                         Null means the rate is unavailable; do not relabel native amounts.
                     type: number
                     nullable: true
@@ -2060,20 +2139,47 @@ components:
         MarginByContract:
             type: object
             properties:
+                reporting_margin:
+                    description: Selected charge converted into reporting_currency_code. A present null is unavailable, not a fallback to reporting_initial_margin.
+                    type: number
+                    nullable: true
+                reporting_maintenance_margin:
+                    description: Maintenance amount converted into reporting_currency_code, subject to margin_availability.
+                    type: number
+                    nullable: true
+                maintenance_margin:
+                    description: Supported maintenance amount for the same account and methodology. Unsupported amounts are zero with an availability reason.
+                    type: number
+                    nullable: true
+                margin:
+                    description: Account-selected charge, including supported markups. A present zero or null must never fall back to initial_margin.
+                    type: number
+                    nullable: true
+                margin_contract_version:
+                    description: Version 2 distinguishes typed initial and maintenance from the selected charge. Absent or null on legacy records.
+                    type: integer
+                    nullable: true
+                    enum: [2, null]
+                margin_basis:
+                    type: string
+                    nullable: true
+                    enum: [initial, maintenance, custom, single, mixed, null]
+                margin_availability:
+                    $ref: '#/components/schemas/MarginAvailability'
                 reporting_currency_code:
-                    description: Staging only. Currency of the additive reporting amounts.
+                    description: Currency of the additive reporting amounts.
                     type: string
                     example: GBP
                 reporting_fxrate:
-                    description: Staging only. Native-currency units per reporting-currency unit, unlike the top-level rate.
+                    description: Native-currency units per reporting-currency unit, unlike the top-level rate.
                     type: number
                     nullable: true
                 reporting_initial_margin:
-                    description: Staging only. Initial margin converted into reporting_currency_code.
+                    description: Initial margin converted into reporting_currency_code.
                     type: number
                     nullable: true
                 reporting_option_liquidation_value:
-                    description: Staging only. Option liquidation value converted into reporting_currency_code.
+                    description: Option liquidation value converted into reporting_currency_code.
                     type: number
                     nullable: true
                 venue_group_code:
@@ -2109,7 +2215,7 @@ components:
                 fxrate:
                     description: >-
                         Native-currency units per USD. Convert a native amount into the
-                        staging result currency with amount / fxrate * result.reporting_fxrate.
+                        result currency with amount / fxrate * result.reporting_fxrate.
                         Null means the rate is unavailable; do not relabel native amounts.
                     type: number
                     nullable: true
@@ -2189,6 +2295,25 @@ components:
         MarginBySpan:
             type: object
             properties:
+                maintenance_margin:
+                    description: Supported maintenance amount for the same account and methodology. Unsupported amounts are zero with an availability reason.
+                    type: number
+                    nullable: true
+                margin:
+                    description: Account-selected charge, including supported markups. A present zero or null must never fall back to initial_margin.
+                    type: number
+                    nullable: true
+                margin_contract_version:
+                    description: Version 2 distinguishes typed initial and maintenance from the selected charge. Absent or null on legacy records.
+                    type: integer
+                    nullable: true
+                    enum: [2, null]
+                margin_basis:
+                    type: string
+                    nullable: true
+                    enum: [initial, maintenance, custom, single, mixed, null]
+                margin_availability:
+                    $ref: '#/components/schemas/MarginAvailability'
                 clearing_org:
                     type: string
                     example: CME
@@ -2376,12 +2501,31 @@ components:
             description: One account's figures from a batch.
             type: object
             properties:
+                maintenance_margin:
+                    description: Supported maintenance amount for the same account and methodology. Unsupported amounts are zero with an availability reason.
+                    type: number
+                    nullable: true
+                margin:
+                    description: Account-selected charge, including supported markups. A present zero or null must never fall back to initial_margin.
+                    type: number
+                    nullable: true
+                margin_contract_version:
+                    description: Version 2 distinguishes typed initial and maintenance from the selected charge. Absent or null on legacy records.
+                    type: integer
+                    nullable: true
+                    enum: [2, null]
+                margin_basis:
+                    type: string
+                    nullable: true
+                    enum: [initial, maintenance, custom, single, mixed, null]
+                margin_availability:
+                    $ref: '#/components/schemas/MarginAvailability'
                 reporting_fxrate:
-                    description: Staging only. Reporting-currency units per USD.
+                    description: Reporting-currency units per USD.
                     type: number
                     nullable: true
                 currency_version:
-                    description: Staging only. Version 1 identifies normalized monetary values.
+                    description: Version 1 identifies normalized monetary values.
                     type: integer
                     enum: [1]
                 currency_code:
@@ -2662,7 +2806,7 @@ components:
 
         WhatIfResponse:
             description: >-
-                In staging, summary and portfolio monetary values use the current General
+                For normalized results, summary and portfolio monetary values use the current General
                 Currency. Contract rows add reporting_currency_code, initial_margin_1/2
                 and option_liquidation_value_1/2 in that currency. Legacy im_usd_1/2 and
                 olv_usd_1/2 remain USD and their currency_code remains USD.

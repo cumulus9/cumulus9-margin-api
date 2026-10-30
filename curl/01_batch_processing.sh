@@ -90,7 +90,7 @@ RESULTS=$(curl -s "${C9_API_ENDPOINT}/portfolios/batch/${BATCH_ID}/results" \
   -H "Authorization: Bearer ${C9_API_SECRET}")
 
 echo "$RESULTS" | jq -r '"Accounts: \(.total)"'
-echo "$RESULTS" | jq -r '.results[] | "  \(.account_code): \(.initial_margin)"'
+echo "$RESULTS" | jq -r '.results[] | "  \(.account_code): \(if has("margin") then .margin else .initial_margin end)"'
 
 # ---------------------------------------------------------------------------
 # Step 4: Drill down into one account
@@ -105,4 +105,4 @@ PORTFOLIO_ID=$(echo "$RESULTS" | jq -r '.results[0].portfolio_id')
 echo ""
 curl -s "${C9_API_ENDPOINT}/results?request_id=${REQUEST_ID}&portfolio_id=${PORTFOLIO_ID}" \
   -H "Authorization: Bearer ${C9_API_SECRET}" \
-  | jq -r '.[] | "\(.account_code): \(.portfolio | length) positions, IM \(.initial_margin)"'
+  | jq -r '.[] | "\(.account_code): \(.portfolio | length) positions, applicable margin \(if has("margin") then .margin else .initial_margin end)"'

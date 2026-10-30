@@ -58,7 +58,11 @@ cumulus9
     .postPortfolio(payload)
     .then((results) => {
         for (const account of results.data) {
-            console.log(`${account.account_code}: initial_margin = ${account.currency_code || 'currency unavailable'} ${account.initial_margin.toLocaleString()}`)
+            const margin = Object.hasOwn(account, 'margin') ? account.margin : account.initial_margin
+            console.log({ account_code: account.account_code, currency_code: account.currency_code,
+                initial_margin: account.initial_margin, maintenance_margin: account.maintenance_margin,
+                margin, margin_contract_version: account.margin_contract_version,
+                margin_availability: account.margin_availability })
         }
         console.log(JSON.stringify(results, null, 2))
     })

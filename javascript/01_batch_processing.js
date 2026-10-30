@@ -73,10 +73,12 @@ async function main() {
     for (const account of accounts) {
         const currency = account.currency_code
         if (!currency) continue // Unknown currencies cannot safely be aggregated.
-        totalsByCurrency.set(currency, (totalsByCurrency.get(currency) || 0) + (account.initial_margin || 0))
+        const margin = Object.hasOwn(account, 'margin') ? account.margin : account.initial_margin
+        const prior = totalsByCurrency.has(currency) ? totalsByCurrency.get(currency) : 0
+        totalsByCurrency.set(currency, margin == null || prior == null ? null : prior + margin)
     }
     for (const [currency, total] of totalsByCurrency) {
-        console.log(`Total initial margin across batch: ${currency} ${total.toLocaleString()}`)
+        console.log(`Total applicable margin across batch: ${currency} ${total == null ? 'unavailable' : total.toLocaleString()}`)
     }
 
     // Step 4: Drill down into one account. The call above returns totals; this

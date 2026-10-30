@@ -8,7 +8,7 @@
 #   - Each sub-account gets its own row with `parent_portfolio_id` linking back.
 #
 # `gross_margin` is the sum of margins computed before any cross-account or
-# cross-portfolio offset; `initial_margin` is the post-offset (net) requirement.
+# cross-portfolio offset; `margin` is the selected post-offset charge.
 # Comparing the two reveals the diversification benefit at the master level.
 
 import json
@@ -34,7 +34,7 @@ def post_portfolio(payload: dict) -> dict:
 # Sub-account "STRAT_LONG" runs a long Brent Crude futures book.
 # Sub-account "STRAT_SHORT" runs a short Brent Crude futures book on the
 # same contract. At the master account level the two books partially offset,
-# so initial_margin (net) will be lower than gross_margin (sum of sub-accounts).
+# so margin (net) will be lower than gross_margin (sum of sub-accounts).
 
 payload = {
     "vendor_symbology": "clearing",
@@ -89,18 +89,24 @@ sub_accounts = [r for r in results["data"] if r.get("parent_portfolio_id")]
 
 print("Master accounts:")
 for r in parents:
-    im = r["initial_margin"]
+    im = r['margin'] if 'margin' in r else r.get('initial_margin')
+    if im is None:
+        print(f"  {r['account_code']}: applicable margin unavailable")
+        continue
     gm = r["gross_margin"]
     offset = gm - im
-    print(f"  {r['account_code']:<15} initial=${im:>14,.2f}  gross=${gm:>14,.2f}  offset=${offset:>12,.2f}")
+    print(f"  {r['account_code']:<15} applicable=${im:>14,.2f}  gross=${gm:>14,.2f}  offset=${offset:>12,.2f}")
 
 print("\nSub-accounts:")
 for r in sub_accounts:
     parent = next((p for p in parents if p["portfolio_id"] == r["parent_portfolio_id"]), None)
     parent_label = parent["account_code"] if parent else "?"
-    im = r["initial_margin"]
+    im = r['margin'] if 'margin' in r else r.get('initial_margin')
+    if im is None:
+        print(f"  {r['account_code']}: applicable margin unavailable")
+        continue
     gm = r["gross_margin"]
-    print(f"  {parent_label} / {r['account_code']:<15} initial=${im:>14,.2f}  gross=${gm:>14,.2f}")
+    print(f"  {parent_label} / {r['account_code']:<15} applicable=${im:>14,.2f}  gross=${gm:>14,.2f}")
 
 # Full response for reference
 print("\nFull response:")

@@ -81,7 +81,10 @@ payload = {
 results = post_portfolio(payload)
 
 for account in results["data"]:
-    print(f"{account['account_code']}: initial_margin = {account.get('currency_code', 'currency unavailable')} {account['initial_margin']:,.2f}")
+    selected = account['margin'] if 'margin' in account else account.get('initial_margin')
+    print(json.dumps({key: account.get(key) for key in
+        ['account_code', 'currency_code', 'initial_margin', 'maintenance_margin',
+         'margin_contract_version', 'margin_availability']} | {'margin': selected}, indent=2))
 
 # Full JSON response:
 print(json.dumps(results, indent=2))

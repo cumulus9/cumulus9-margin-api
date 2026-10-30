@@ -1,11 +1,11 @@
 # Cumulus9 - All rights reserved.
-# Staging only: GBP reporting totals with native USD and EUR margin rows.
+# GBP reporting totals with native USD and EUR margin rows.
 import os
 import requests
 
 payload = {
     "calculation_type": "margins",
-    "currency_code": "GBP",  # Omit this key to use General Currency in staging.
+    "currency_code": "GBP",  # Omit this key to use General Currency.
     "vendor_symbology": "clearing",
     "in_memory": True,
     "portfolio": [
@@ -21,7 +21,7 @@ response = requests.post(
 response.raise_for_status()
 for account in response.json()["data"]:
     if account.get("currency_version") != 1:
-        raise RuntimeError("This example requires staging reporting-currency version 1.")
+        raise RuntimeError("This example requires reporting-currency version 1.")
     currency = account["currency_code"]
     target_rate = account["reporting_fxrate"]
     print(f"Initial margin: {currency} {account['initial_margin']:,.2f}")

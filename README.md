@@ -8,11 +8,10 @@ Submit a portfolio of positions via a single POST request and receive margin res
 
 ## Reporting currency availability
 
-The reporting-currency contract below is available in **staging**. It has not
-been released to the public production API. Production callers must continue to
-inspect each result's currency and must not assume the new fields are present.
+New calculations carry reporting-currency metadata. Older stored results may
+omit it; always inspect the version and currency before comparing amounts.
 
-In staging, omitting request `currency_code` uses the client's General Currency
+Omitting request `currency_code` uses the client's General Currency
 setting. An explicit `currency_code`, such as `GBP`, overrides that default for
 the calculation. Newly normalized results carry `currency_version: 1`,
 `currency_code`, and `reporting_fxrate` (reporting-currency units per USD, nullable when unavailable).
@@ -40,7 +39,69 @@ fields, continue to mean USD.
 Older unversioned responses can contain headline amounts in their stated currency
 alongside USD P&L or native-currency analytics. Do not relabel or uniformly scale
 all fields. The [reporting-currency example](python/14_reporting_currency.py)
-requires staging version 1 and demonstrates the native/reporting distinction.
+requires currency version 1 and demonstrates the native/reporting distinction.
+
+## Initial, maintenance and applicable margin
+
+New calculations expose three distinct amounts on account summaries and common
+margin breakdowns:
+
+| Field | Meaning |
+| --- | --- |
+| `initial_margin` | Supported model initial amount for the submitted account |
+| `maintenance_margin` | `number` | Supported maintenance amount; zero with reason when unsupported |
+| `margin` | `number\|null` | Account-selected charge; preserve explicit zero and null |
+| `margin_contract_version` | `integer` | `2` for the separated margin contract |
+| `margin_basis` / `margin_availability` | `string` / `object` | Selection basis and per-field provenance |
+| `maintenance_margin` | Supported maintenance amount for the same account and methodology |
+| `margin` | The actual account-selected charge, including supported custom markups |
+
+Use `margin` for operational requirements, comparisons and selected-margin totals.
+Do not derive it from a universal hedge/speculator rule or force it to equal one
+of the typed amounts. `gross_margin` retains its existing gross selected meaning.
+Native breakdown rows keep their own currency; `reporting_margin`,
+`reporting_initial_margin` and `reporting_maintenance_margin`, where supplied,
+are their reporting-currency equivalents. Account summaries/history retain their
+existing rounding; full results retain calculation precision.
+
+`margin_contract_version: 2` identifies this contract. `margin_basis` is
+`initial`, `maintenance`, `custom`, `single` or `mixed`. Each
+`margin_availability` entry has `status` (`available`, `not_applicable`,
+`unavailable` or `legacy`) and an optional `reason`. Unsupported typed amounts
+contribute numeric zero with a reason. Do not display that zero as verified
+maintenance or claim a mixed aggregate is complete when contributions are omitted.
+A selected `margin: null` remains unavailable.
+
+Old stored `initial_margin` values retain their original selected meaning and
+are labelled legacy when normalized. For integrations supporting old responses,
+choose by **key presence**, preserving both zero and null:
+
+```python
+selected = row['margin'] if 'margin' in row else row.get('initial_margin')
+```
+
+For example, a supported custom-markup result may be:
+
+```json
+{
+  "currency_code": "USD",
+  "initial_margin": 110,
+  "maintenance_margin": 100,
+  "margin": 125,
+  "margin_contract_version": 2,
+  "margin_basis": "custom",
+  "margin_availability": {
+    "initial_margin": {"status": "available"},
+    "maintenance_margin": {"status": "available"},
+    "margin": {"status": "available"}
+  }
+}
+```
+
+Forecast peers are `initial_margin_forecast`, `maintenance_margin_forecast` and
+`margin_forecast`; a disabled forecast remains null. Broker-supplied cash fields
+such as `eod_initial_margin` keep their original meaning.
+See the [margin-fields example](python/15_margin_fields.py) for availability-aware output.
 
 ## Authentication
 
@@ -139,7 +200,7 @@ All parameters are set at the top level of the JSON request body alongside the `
 | `calculation_type`            | `string`        | `"all"`               | Calculation modes: `"margins"`, `"analytics"`, `"simm"`, `"all"`. Combine with commas, e.g. `"margins,analytics"`                              |
 | `vendor_symbology`            | `string`        | `"clearing"`          | Position symbology format: `"clearing"`, `"globex"`, `"ion"`, `"gmi"`, `"tt_new"`. `"globex"` reads CME Group positions from their Globex codes and every other venue from clearing |
 | `cme_symbology`               | `string`        | `"clearing"`          | **Deprecated.** `"globex"` here does what `vendor_symbology: "globex"` does; send that instead. Still honoured |
-| `currency_code`               | `string`        | Environment setting in staging; `"USD"` in production | Reporting currency for aggregated results (ISO 4217). Explicit values override the environment default. Supported: `USD`, `EUR`, `GBP`, `JPY`, `CHF`, `AUD`, `CAD`, `BRL`, `CNH`, `HKD`, `INR`, `NZD` |
+| `currency_code`               | `string`        | Environment setting | Reporting currency for aggregated results (ISO 4217). Explicit values override the environment default. Supported: `USD`, `EUR`, `GBP`, `JPY`, `CHF`, `AUD`, `CAD`, `BRL`, `CNH`, `HKD`, `INR`, `NZD` |
 | `bdate`                       | `integer`       | previous business day | Calculation date in `YYYYMMDD` format                                                                                                          |
 | `price_date`                  | `integer`       | previous business day | Price date in `YYYYMMDD` format                                                                                                                |
 | `cycle_code`                  | `string`        | —                     | Exchange cycle code                                                                                                                            |
@@ -341,7 +402,7 @@ Every account the batch calculated, in one call.
 | `source`    | Meaning                                                                                                                                                    |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `"live"`    | The account still carries this batch's calculation, so every field above is populated                                                                      |
-| `"history"` | A later calculation has replaced the account's current figures. The durable record keeps `initial_margin`, `option_liquidation_value`, `additional_margin`, `value_at_risk`, `stress_loss`, `exceptions` and `closest_matches`; `requirement`, `gross_margin` and `gross_requirement` come back `null` rather than as a zero you would read as a real number |
+| `"history"` | A later calculation has replaced the account's current figures. The durable record keeps `initial_margin`, `maintenance_margin`, `margin`, their version/basis/availability metadata, `option_liquidation_value`, `additional_margin`, `value_at_risk`, `stress_loss`, `exceptions` and `closest_matches`; `requirement`, `gross_margin` and `gross_requirement` come back `null` rather than as a zero you would read as a real number |
 
 In practice a batch fetched after it finishes is entirely `live`. Rows turn `history` when you re-read an older batch whose accounts have since been recalculated.
 
@@ -717,9 +778,13 @@ Each element in the `data` array contains:
 | `status`                       | `string`  | `"done"` on success                                               |
 | `price_date`                   | `integer` | Calculation date (`YYYYMMDD`)                                     |
 | `currency_code`                | `string`  | Reporting currency for aggregated results                         |
-| `reporting_fxrate`             | `number`  | Staging: reporting-currency units per USD                        |
-| `currency_version`             | `integer` | Staging: `1` identifies normalized monetary results              |
-| `initial_margin`               | `number`  | Total initial margin requirement                                  |
+| `reporting_fxrate`             | `number`  | Reporting-currency units per USD                        |
+| `currency_version`             | `integer` | `1` identifies normalized monetary results              |
+| `initial_margin`               | `number`  | Supported model initial amount; inspect availability               |
+| `maintenance_margin` | `number` | Supported maintenance amount; zero with reason when unsupported |
+| `margin` | `number\|null` | Account-selected charge; preserve explicit zero and null |
+| `margin_contract_version` | `integer` | `2` for the separated margin contract |
+| `margin_basis` / `margin_availability` | `string` / `object` | Selection basis and per-field provenance |
 | `gross_margin`                 | `number`  | Gross margin before offsets                                       |
 | `requirement`                  | `number`  | Net margin requirement                                            |
 | `gross_requirement`            | `number`  | Gross margin requirement                                          |
@@ -804,7 +869,11 @@ analytics coverage.
 | `result_type`              | `string` | Margin model used (e.g. `"span"`, `"span2"`, `"eurexpme"`) |
 | `currency_code`            | `string` | Local currency of the clearing house                       |
 | `fxrate`                   | `number\|null` | FX rate used for USD conversion. `null` means the rate is unavailable and this row contributes zero to converted aggregates |
-| `initial_margin`           | `number` | Margin requirement for this CCP                            |
+| `initial_margin`           | `number` | Supported initial amount for this CCP                      |
+| `maintenance_margin` | `number` | Supported maintenance amount; zero with reason when unsupported |
+| `margin` | `number\|null` | Account-selected charge; preserve explicit zero and null |
+| `margin_contract_version` | `integer` | `2` for the separated margin contract |
+| `margin_basis` / `margin_availability` | `string` / `object` | Selection basis and per-field provenance |
 | `option_liquidation_value` | `number` | Option liquidation value at this CCP                       |
 | `delivery_margin`          | `number` | ICE Clear Europe delivery-margin component in row currency  |
 | `cvm`                      | `number` | Contingent variation margin component in row currency       |
@@ -844,7 +913,11 @@ retaining their native-currency margin figures.
 | `currency_code`            | `string` | Local currency                  |
 | `fxrate`                   | `number` | FX rate to base currency        |
 | `scenario`                 | `string` | SPAN scenario number            |
-| `initial_margin`           | `number` | Total margin for this commodity |
+| `initial_margin`           | `number` | Supported initial amount for this commodity |
+| `maintenance_margin` | `number` | Supported maintenance amount; zero with reason when unsupported |
+| `margin` | `number\|null` | Account-selected charge; preserve explicit zero and null |
+| `margin_contract_version` | `integer` | `2` for the separated margin contract |
+| `margin_basis` / `margin_availability` | `string` / `object` | Selection basis and per-field provenance |
 | `scanning_risk`            | `number` | Scanning risk component         |
 | `prompt_date_charge`       | `number` | Prompt date charge              |
 | `intra_spread_charge`      | `number` | Intra-commodity spread charge   |
@@ -948,7 +1021,7 @@ is the staged portfolio.
 }
 ```
 
-`summary` is the portfolio-level before/after pair. In staging, both sides use
+`summary` is the portfolio-level before/after pair. For normalized results, both sides use
 the current General Currency; the example uses GBP with a GBP/USD rate of 0.8.
 The contract-row `initial_margin_1/2` and `option_liquidation_value_1/2` use
 `reporting_currency_code`. The legacy `im_usd_1/2` and `olv_usd_1/2` remain USD
@@ -1152,7 +1225,9 @@ response = requests.post(
 
 results = response.json()
 for account in results["data"]:
-    print(f"{account['account_code']}: {account.get('currency_code', 'currency unavailable')} {account['initial_margin']:,.2f}")
+    selected = account['margin'] if 'margin' in account else account.get('initial_margin')
+    amount = 'unavailable' if selected is None else f'{selected:,.2f}'
+    print(f"{account['account_code']}: {account.get('currency_code', 'currency unavailable')} {amount}")
 ```
 
 ### Batch submission (Python)
@@ -1200,7 +1275,9 @@ results = requests.get(
 ).json()
 
 for account in results["results"]:
-    print(f"{account['account_code']}: {account.get('currency_code', 'currency unavailable')} {account['initial_margin']:,.2f}")
+    selected = account['margin'] if 'margin' in account else account.get('initial_margin')
+    amount = 'unavailable' if selected is None else f'{selected:,.2f}'
+    print(f"{account['account_code']}: {account.get('currency_code', 'currency unavailable')} {amount}")
 
 # Full drill-down for one account
 detail = requests.get(
