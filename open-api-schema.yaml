@@ -948,7 +948,10 @@ components:
                     type: boolean
                     default: false
                 position_limits_enabled:
-                    description: Enable position limit checks.
+                    description: >-
+                        Enable position limit checks. Applies only to portfolios
+                        posted with a service account API key; ignored for user
+                        accounts.
                     type: boolean
                     default: false
                 pricing:

@@ -216,7 +216,7 @@ All parameters are set at the top level of the JSON request body alongside the `
 | `stress_test_enabled`         | `boolean`       | `false`               | Enable stress testing on the portfolio                                                                                                         |
 | `stress_test_details_enabled` | `boolean`       | `false`               | Include detailed stress test drill-down                                                                                                        |
 | `pricing`                     | `object`        | —                     | Deprecated and ignored. Live pricing follows the environment's Market Data licence, not a per-portfolio flag; the key is still accepted   |
-| `position_limits_enabled`     | `boolean`       | `false`               | Enable position limit checks                                                                                                                   |
+| `position_limits_enabled`     | `boolean`       | `false`               | Enable position limit checks. Applies only to portfolios posted with a service account API key; ignored for user accounts                    |
 | `fx_margin_parameters`        | `object`        | —                     | FX margin rate overrides, keyed by currency pair (e.g. `{ "EUR_USD": 0.02 }`)                                                                  |
 
 ### `risk_metrics` Object
@@ -830,7 +830,7 @@ Each element in the `data` array contains:
 | `pnl_vector_pct`               | `array`   | Historical P&L vector as percentages                              |
 | `scenario_analysis`            | `object`  | Scenario analysis results                                         |
 | `stress_tests`                 | `object`  | Stress test results (when `stress_test_enabled` is `true`)        |
-| `position_limits`              | `object`  | Position limit results (when `position_limits_enabled` is `true`) |
+| `position_limits`              | `object`  | Position limit results (when `position_limits_enabled` is `true` and the caller is a service account) |
 | `exceptions`                   | `array`   | Positions excluded from calculations with reason                  |
 | `closest_matches`              | `array`   | Positions auto-corrected when `use_closest_match` is `true`       |
 | `portfolio`                    | `array`   | Enriched position records with resolved contract details          |
