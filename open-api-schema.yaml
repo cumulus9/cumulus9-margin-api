@@ -877,9 +877,9 @@ components:
                     default: all
                     example: margins
                 vendor_symbology:
-                    description: Symbology format for position codes.
+                    description: Symbology format for position codes. `bloomberg` is optional for rows that send `bloomberg_ticker`.
                     type: string
-                    enum: [clearing, ion, gmi, tt_new]
+                    enum: [clearing, ion, gmi, tt_new, bloomberg]
                     default: clearing
                     example: clearing
                 cme_symbology:
@@ -1103,15 +1103,19 @@ components:
             additionalProperties: true
 
         ETDPosition:
-            description: Exchange-Traded Derivative position (futures and options).
+            description: Exchange-Traded Derivative position (futures and options), identified by exchange, contract, type, expiry and strike, or by a full Bloomberg ticker.
             type: object
             required:
                 - account_code
-                - exchange_code
-                - contract_code
-                - contract_type
                 - net_position
+            anyOf:
+                - required: [exchange_code, contract_code, contract_type]
+                - required: [bloomberg_ticker]
             properties:
+                bloomberg_ticker:
+                    description: Full Bloomberg ticker, in month-code form (`TYZ6P 105.25 Comdty`) or dated option form (`SX5E 11/20/26 C6100 Index`). Replaces exchange_code, contract_code, contract_type, contract_expiry and contract_strike. Must identify exactly one listed contract, expiry and strike.
+                    type: string
+                    example: TYZ6 Comdty
                 account_code:
                     description: Internal account identifier.
                     type: string
@@ -2755,7 +2759,7 @@ components:
                             type: integer
                 vendor_symbology:
                     type: string
-                    enum: [clearing, ion, gmi, tt_new]
+                    enum: [clearing, ion, gmi, tt_new, bloomberg]
                     default: clearing
                 cme_symbology:
                     type: string

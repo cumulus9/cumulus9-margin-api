@@ -196,7 +196,7 @@ All parameters are set at the top level of the JSON request body alongside the `
 | ----------------------------- | --------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `portfolio`                   | `array`         | _required_            | Array of position objects (see [Position Types](#position-types))                                                                              |
 | `calculation_type`            | `string`        | `"all"`               | Calculation modes: `"margins"`, `"analytics"`, `"simm"`, `"all"`. Combine with commas, e.g. `"margins,analytics"`                              |
-| `vendor_symbology`            | `string`        | `"clearing"`          | Position symbology format: `"clearing"`, `"globex"`, `"ion"`, `"gmi"`, `"tt_new"`. `"globex"` reads CME Group positions from their Globex codes and every other venue from clearing |
+| `vendor_symbology`            | `string`        | `"clearing"`          | Position symbology format: `"clearing"`, `"globex"`, `"ion"`, `"gmi"`, `"tt_new"`, `"bloomberg"`. `"globex"` reads CME Group positions from their Globex codes and every other venue from clearing. `"bloomberg"` is optional for [Bloomberg tickers](#bloomberg-tickers); ordinary rows in the same request use clearing |
 | `cme_symbology`               | `string`        | `"clearing"`          | **Deprecated.** `"globex"` here does what `vendor_symbology: "globex"` does; send that instead. Still honoured |
 | `currency_code`               | `string`        | Environment setting | Reporting currency for aggregated results (ISO 4217). Explicit values override the environment default. Supported: `USD`, `EUR`, `GBP`, `JPY`, `CHF`, `AUD`, `CAD`, `BRL`, `CNH`, `HKD`, `INR`, `NZD` |
 | `bdate`                       | `integer`       | previous business day | Calculation date in `YYYYMMDD` format                                                                                                          |
@@ -546,6 +546,30 @@ Standard listed futures and options.
     "account_type": "H"
 }
 ```
+
+#### Bloomberg tickers
+
+An ETD position can be identified by its full Bloomberg ticker instead of `exchange_code`, `contract_code`, `contract_type`, `contract_expiry` and `contract_strike`. Send `bloomberg_ticker`, `account_code` and `net_position`:
+
+```json
+[
+    { "account_code": "Account 001", "bloomberg_ticker": "TYZ6 Comdty", "net_position": 5 },
+    { "account_code": "Account 001", "bloomberg_ticker": "S K7P 1230 Comdty", "net_position": -2 },
+    { "account_code": "Account 001", "bloomberg_ticker": "SX5E 12/18/26 C5000 Index", "net_position": 10 },
+    { "account_code": "Account 001", "bloomberg_ticker": "AAPL US 12/18/26 C200 Equity", "net_position": 3 }
+]
+```
+
+| Form | Examples | Identity |
+| ---- | -------- | -------- |
+| Month code | `COF7 Comdty`, `TYZ6P 105.25 Comdty`, `S K7P 1230 Comdty`, `VFWX26C2 105.5 Comdty` | Root, contract month and year, call/put and strike |
+| Dated option | `SX5E 11/20/26 C6100 Index`, `SAP GR 12/17/27 C250 Equity`, `SPX US 12/18/26 C6650 Index` | Root, exchange, expiry date, call/put and strike |
+
+- The month code is the **contract month**, as on Bloomberg: `OEZ6` is the December Euro-Bobl option, which expires in November.
+- Strikes are written as Bloomberg writes them and converted to the exchange unit (CBOT grain options are quoted in cents).
+- The ticker must identify exactly one listed contract, expiry and strike. An unknown, ambiguous or unlisted ticker is rejected with a reason naming the ticker; nothing is substituted, so a ticker never becomes a nearby strike or expiry.
+- Case and spacing do not matter, and a truncated yellow key (`Equit`) is accepted when it can only mean one key. The yellow key itself (`Comdty`, `Index`, `Curncy`, `Equity`) is required, and generic tickers such as `CO1 Comdty` are rejected because they name a rolling position rather than a contract.
+- The response returns your original `bloomberg_ticker` beside the resolved exchange, contract, expiry and strike, and the generated `bbg_ticker`.
 
 ### Fixed Income (Bonds)
 
